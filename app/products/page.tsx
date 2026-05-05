@@ -1,0 +1,93 @@
+'use client'
+import { useEffect, useState } from 'react'
+import AdminLayout from '@/components/layout/AdminLayout'
+import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState<any[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from('products').select('*, categories(name), product_images(url,is_primary), product_variants(stock)').order('created_at', { ascending: false })
+      setProducts(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const toggleActive = async (id: string, is_active: boolean) => {
+    await supabase.from('products').update({ is_active: !is_active }).eq('id', id)
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !is_active } : p))
+    toast.success(is_active ? 'Product hidden' : 'Product published')
+  }
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm('Delete this product? This cannot be undone.')) return
+    await supabase.from('products').delete().eq('id', id)
+    setProducts(prev => prev.filter(p => p.id !== id))
+    toast.success('Product deleted')
+  }
+
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.categories?.name || '').toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <AdminLayout>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div><h1 className="text-2xl font-bold text-gray-900">Products</h1><p className="text-sm text-gray-500">{products.length} total</p></div>
+          <Link href="/products/new" className="btn btn-primary"><Plus size={16} /> Add Product</Link>
+        </div>
+        <div className="card">
+          <div className="p-4 border-b border-gray-100">
+            <div className="relative max-w-xs"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input className="input pl-9" style={{ height: 36 }} placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50/50">{['Product','Category','Price','Stock','Status','Actions'].map(h => <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500">{h}</th>)}</tr></thead>
+              <tbody>
+                {filtered.map(p => {
+                  const img = p.product_images?.find((i: any) => i.is_primary) || p.product_images?.[0]
+                  const totalStock = (p.product_variants || []).reduce((s: number, v: any) => s + v.stock, 0)
+                  const effectivePrice = p.sale_price || p.original_price
+                  return (
+                    <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-14 border rounded overflow-hidden flex-shrink-0" style={{ background: '#F5EDE3', borderColor: '#E8DDD4' }}>
+                            {img?.url ? <Image src={img.url} alt={p.name} width={40} height={56} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-lg">🥻</div>}
+                          </div>
+                          <div><p className="font-medium text-gray-900 max-w-xs truncate">{p.name}</p><p className="text-xs text-gray-400">{p.fabric}</p></div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{p.categories?.name || '—'}</td>
+                      <td className="px-5 py-3">
+                        <span className="font-semibold text-gray-900">₹{Number(effectivePrice).toLocaleString('en-IN')}</span>
+                        {p.sale_price && <span className="text-xs line-through text-gray-400 ml-1">₹{Number(p.original_price).toLocaleString('en-IN')}</span>}
+                      </td>
+                      <td className="px-5 py-3"><span className={`badge ${totalStock === 0 ? 'bg-red-100 text-red-700' : totalStock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>{totalStock === 0 ? 'Out of Stock' : `${totalStock} units`}</span></td>
+                      <td className="px-5 py-3"><span className={`badge ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{p.is_active ? 'Published' : 'Hidden'}</span></td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/products/${p.id}`} className="p-1.5 rounded hover:bg-gray-100" title="Edit"><Edit size={14} style={{ color: 'var(--crimson)' }} /></Link>
+                          <button onClick={() => toggleActive(p.id, p.is_active)} className="p-1.5 rounded hover:bg-gray-100" title={p.is_active ? 'Hide' : 'Publish'}>{p.is_active ? <EyeOff size={14} className="text-gray-500" /> : <Eye size={14} className="text-gray-500" />}</button>
+                          <button onClick={() => deleteProduct(p.id)} className="p-1.5 rounded hover:bg-red-50" title="Delete"><Trash2 size={14} className="text-red-400" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {filtered.length === 0 && <p className="text-center py-12 text-sm text-gray-400">{loading ? 'Loading...' : 'No products found'}</p>}
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}
