@@ -4,7 +4,6 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const formatPrice2 = (n: number) => '₹' + Number(n).toLocaleString('en-IN')
@@ -145,5 +144,3 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     </AdminLayout>
   )
 }
-
-function formatPrice(n: number) { return '₹' + n.toLocaleString('en-IN') }
