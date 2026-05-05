@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
     setLoading(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { toast.error(error.message); setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
+   const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
     if (!profile || !['staff','manager','superadmin'].includes(profile.role)) {
       await supabase.auth.signOut()
       toast.error('Access denied. Admin accounts only.')
