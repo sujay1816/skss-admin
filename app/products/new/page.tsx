@@ -9,6 +9,9 @@ import toast from 'react-hot-toast'
 const OCCASIONS = ['Wedding','Festive','Casual','Office','Party','Religious','Daily Wear']
 const WEAVE_TYPES = ['Handloom','Powerloom','Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','None']
 
+const F = ({ label, children, col2 }: { label: string; children: React.ReactNode; col2?: boolean }) => (
+    <div className={col2 ? 'col-span-2' : ''}><label className="text-xs text-gray-600 font-medium mb-1 block">{label}</label>{children}</div>
+  )
 export default function NewProductPage() {
   const router = useRouter()
   const [categories, setCategories] = useState<any[]>([])
@@ -62,9 +65,7 @@ export default function NewProductPage() {
     setLoading(false)
   }
 
-  const F = ({ label, children, col2 }: { label: string; children: React.ReactNode; col2?: boolean }) => (
-    <div className={col2 ? 'col-span-2' : ''}><label className="text-xs text-gray-600 font-medium mb-1 block">{label}</label>{children}</div>
-  )
+
 
   return (
     <AdminLayout>
