@@ -12,18 +12,31 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { toast.error(error.message); setLoading(false); return }
-   const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
-    if (!profile || !['staff','manager','superadmin'].includes(profile.role)) {
-      await supabase.auth.signOut()
-      toast.error('Access denied. Admin accounts only.')
-      setLoading(false); return
-    }
-    router.push('/dashboard')
+  e.preventDefault()
+  setLoading(true)
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) { toast.error(error.message); setLoading(false); return }
+  
+  // Wait a moment for session to be established
+  await new Promise(r => setTimeout(r, 500))
+  
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
+  
+  if (!profile) {
+    // Profile not found - check if user exists in auth but not profiles
+    toast.error('Profile not found. Please sign up on the storefront first.')
+    await supabase.auth.signOut()
+    setLoading(false); return
   }
+  
+  if (!['staff','manager','superadmin'].includes(profile.role)) {
+    await supabase.auth.signOut()
+    toast.error('Access denied. Admin accounts only.')
+    setLoading(false); return
+  }
+  
+  router.push('/dashboard')
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #2C1810 100%)' }}>
