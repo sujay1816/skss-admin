@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -24,23 +24,41 @@ export default function Sidebar({ unreadCount }: { unreadCount: number }) {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [brandName, setBrandName] = useState('SKSS')
+  const [brandSubtitle, setBrandSubtitle] = useState('Admin Panel')
+  const [logoUrl, setLogoUrl] = useState('/logo.png')
+
+  useEffect(() => {
+    supabase.from('site_config')
+      .select('key, value')
+      .in('key', ['brand_name', 'brand_subtitle', 'logo_url'])
+      .then(({ data }) => {
+        if (!data) return
+        const cfg: Record<string, string> = {}
+        data.forEach((r: any) => { if (r.value) cfg[r.key] = r.value })
+        if (cfg.brand_name) setBrandName(cfg.brand_name)
+        if (cfg.brand_subtitle) setBrandSubtitle(cfg.brand_subtitle)
+        if (cfg.logo_url) setLogoUrl(cfg.logo_url)
+      })
+  }, [])
 
   const logout = async () => {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'global' } as any)
     router.push('/login')
   }
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-white/10 flex items-center gap-3">
-        <Image src="/logo.png" alt="SKSS" width={32} height={32} className="object-contain" />
-        <div>
-          <p className="text-white text-sm font-semibold leading-tight">SKSS Admin</p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Sai Krishna Silks</p>
+        <Image src={logoUrl} alt={brandName} width={32} height={32} className="object-contain rounded" />
+        <div className="min-w-0">
+          <p className="text-white text-sm font-semibold leading-tight truncate">{brandName}</p>
+          <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{brandSubtitle}</p>
         </div>
       </div>
       <nav className="flex-1 py-3 overflow-y-auto">
-        <Link href="/notifications" className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded transition-all text-sm ${pathname === '/notifications' ? 'bg-red-900/60 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+        <Link href="/notifications"
+          className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded transition-all text-sm ${pathname === '/notifications' ? 'bg-red-900/60 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
           <div className="flex items-center gap-3"><Bell size={16} /> Notifications</div>
           {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>}
         </Link>
@@ -65,12 +83,16 @@ export default function Sidebar({ unreadCount }: { unreadCount: number }) {
 
   return (
     <>
-      {/* Mobile */}
-      <button className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white" onClick={() => setOpen(!open)}>{open ? <X size={18} /> : <Menu size={18} />}</button>
+      <button className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white" onClick={() => setOpen(!open)}>
+        {open ? <X size={18} /> : <Menu size={18} />}
+      </button>
       {open && <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} style={{ background: 'rgba(0,0,0,0.5)' }} />}
-      <div className={`fixed left-0 top-0 bottom-0 z-40 w-56 md:hidden transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#1A1A1A' }}><NavContent /></div>
-      {/* Desktop */}
-      <div className="hidden md:flex flex-col w-56 flex-shrink-0 h-screen sticky top-0" style={{ background: '#1A1A1A' }}><NavContent /></div>
+      <div className={`fixed left-0 top-0 bottom-0 z-40 w-56 md:hidden transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#1A1A1A' }}>
+        <NavContent />
+      </div>
+      <div className="hidden md:flex flex-col w-56 flex-shrink-0 h-screen sticky top-0" style={{ background: '#1A1A1A' }}>
+        <NavContent />
+      </div>
     </>
   )
 }
