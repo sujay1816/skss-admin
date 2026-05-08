@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, BarChart2, PackagePlus, RefreshCcw } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, BarChart2, PackagePlus, RefreshCcw, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -19,6 +19,7 @@ const NAV = [
   { label: 'Banners', href: '/banners', icon: ImgIcon },
   { label: 'Categories', href: '/categories', icon: FolderOpen },
   { label: 'Staff', href: '/staff', icon: UserCog },
+  { label: 'Pages', href: '/pages', icon: FileText },
   { label: 'Config', href: '/config', icon: Settings },
   { label: 'Reset Data', href: '/reset', icon: RefreshCcw },
 ]
