@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, RefreshCcw, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, BarChart2, PackagePlus, RefreshCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 const NAV = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Products', href: '/products', icon: Package },
+  { label: 'Bulk Add', href: '/products/bulk', icon: PackagePlus },
   { label: 'Stock', href: '/stock', icon: BarChart2 },
   { label: 'Orders', href: '/orders', icon: ShoppingBag },
   { label: 'Customers', href: '/customers', icon: Users },
@@ -22,7 +23,7 @@ const NAV = [
   { label: 'Reset Data', href: '/reset', icon: RefreshCcw },
 ]
 
-export default function Sidebar({ unreadCount }: { unreadCount: number }) {
+export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -58,25 +59,33 @@ export default function Sidebar({ unreadCount }: { unreadCount: number }) {
           <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{brandSubtitle}</p>
         </div>
       </div>
+
       <nav className="flex-1 py-3 overflow-y-auto">
         <Link href="/notifications"
-          className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded transition-all text-sm ${pathname === '/notifications' ? 'bg-red-900/60 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+          className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded transition-all text-sm mb-1 ${pathname === '/notifications' ? 'bg-red-900/60 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
           <div className="flex items-center gap-3"><Bell size={16} /> Notifications</div>
-          {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          {unreadCount && unreadCount > 0 ? (
+            <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          ) : null}
         </Link>
+
         {NAV.map(({ label, href, icon: Icon }) => {
-          const active = pathname.startsWith(href)
+          const active = pathname === href || (href !== '/products' && pathname.startsWith(href))
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded transition-all text-sm ${active ? 'text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-              style={{ background: active ? 'var(--crimson)' : 'transparent' }}>
+              className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded transition-all text-sm mb-0.5 ${active ? 'text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              style={{ background: active ? 'var(--crimson, #8B1A2B)' : 'transparent' }}>
               <Icon size={16} /> {label}
             </Link>
           )
         })}
       </nav>
+
       <div className="p-3 border-t border-white/10">
-        <button onClick={logout} className="flex items-center gap-3 w-full px-4 py-2.5 rounded text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all">
+        <button onClick={logout}
+          className="flex items-center gap-3 w-full px-4 py-2.5 rounded text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all">
           <LogOut size={16} /> Sign Out
         </button>
       </div>
@@ -85,14 +94,20 @@ export default function Sidebar({ unreadCount }: { unreadCount: number }) {
 
   return (
     <>
-      <button className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white" onClick={() => setOpen(!open)}>
+      <button className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white"
+        onClick={() => setOpen(!open)}>
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
-      {open && <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} style={{ background: 'rgba(0,0,0,0.5)' }} />}
-      <div className={`fixed left-0 top-0 bottom-0 z-40 w-56 md:hidden transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#1A1A1A' }}>
+      {open && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)}
+          style={{ background: 'rgba(0,0,0,0.5)' }} />
+      )}
+      <div className={`fixed left-0 top-0 bottom-0 z-40 w-56 md:hidden transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ background: '#1A1A1A' }}>
         <NavContent />
       </div>
-      <div className="hidden md:flex flex-col w-56 flex-shrink-0 h-screen sticky top-0" style={{ background: '#1A1A1A' }}>
+      <div className="hidden md:flex flex-col w-56 flex-shrink-0 h-screen sticky top-0"
+        style={{ background: '#1A1A1A' }}>
         <NavContent />
       </div>
     </>
