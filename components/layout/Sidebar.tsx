@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, Tag, RotateCcw, Image as ImgIcon, UserCog, FolderOpen, Settings, LogOut, Bell, Menu, X, RefreshCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -18,6 +18,7 @@ const NAV = [
   { label: 'Categories', href: '/categories', icon: FolderOpen },
   { label: 'Staff', href: '/staff', icon: UserCog },
   { label: 'Config', href: '/config', icon: Settings },
+  { label: 'Reset Data', href: '/reset', icon: RefreshCcw },
 ]
 
 export default function Sidebar({ unreadCount }: { unreadCount: number }) {
