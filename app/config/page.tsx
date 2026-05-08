@@ -11,6 +11,7 @@ const BODY_FONTS = ['DM Sans','Inter','Poppins','Nunito','Lato','Open Sans','Ral
 const CONFIG_GROUPS = [
   { title: 'Brand Identity', keys: [
     { key: 'brand_name', label: 'Brand Name' },
+    { key: 'brand_subtitle', label: 'Brand Subtitle (shown under logo e.g. SILKS & SAREES)' },
     { key: 'brand_tagline', label: 'Tagline' },
     { key: 'gstin', label: 'GSTIN' },
   ]},
@@ -71,6 +72,7 @@ export default function ConfigPage() {
       Object.entries(DEFAULT_COLORS).forEach(([k, v]) => { if (!c[k]) c[k] = v })
       if (!c.font_heading) c.font_heading = 'Cormorant Garamond'
       if (!c.font_body) c.font_body = 'DM Sans'
+      if (!c.brand_subtitle) c.brand_subtitle = 'SILKS & SAREES'
       setConfig(c)
     })
   }, [])
