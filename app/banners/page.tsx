@@ -6,48 +6,46 @@ import { Plus, Trash2, Upload, Edit, Eye, EyeOff, ChevronUp, ChevronDown } from 
 import toast from 'react-hot-toast'
 
 const OVERLAY_OPTIONS = [
-  { value: 'dark', label: 'Dark (default)' },
+  { value: 'dark',  label: 'Dark (default)' },
   { value: 'light', label: 'Light' },
-  { value: 'none', label: 'None' },
-  { value: 'left', label: 'Dark Left' },
+  { value: 'none',  label: 'None' },
+  { value: 'left',  label: 'Dark Left' },
   { value: 'right', label: 'Dark Right' },
 ]
 
 const TEXT_COLOR_OPTIONS = [
   { value: 'white', label: 'White' },
-  { value: 'gold', label: 'Gold' },
-  { value: 'dark', label: 'Dark' },
+  { value: 'gold',  label: 'Gold' },
+  { value: 'dark',  label: 'Dark' },
 ]
 
 const FOCUS_POINTS = [
-  { value: 'top left',    label: '↖', title: 'Top Left' },
-  { value: 'top center',  label: '↑', title: 'Top Center' },
-  { value: 'top right',   label: '↗', title: 'Top Right' },
-  { value: 'center left', label: '←', title: 'Center Left' },
-  { value: 'center',      label: '●', title: 'Center' },
-  { value: 'center right',label: '→', title: 'Center Right' },
-  { value: 'bottom left', label: '↙', title: 'Bottom Left' },
-  { value: 'bottom center',label:'↓', title: 'Bottom Center' },
-  { value: 'bottom right',label: '↘', title: 'Bottom Right' },
+  { value: 'top left',     label: '↖', title: 'Top Left' },
+  { value: 'top center',   label: '↑', title: 'Top Center' },
+  { value: 'top right',    label: '↗', title: 'Top Right' },
+  { value: 'center left',  label: '←', title: 'Center Left' },
+  { value: 'center',       label: '●', title: 'Center' },
+  { value: 'center right', label: '→', title: 'Center Right' },
+  { value: 'bottom left',  label: '↙', title: 'Bottom Left' },
+  { value: 'bottom center',label: '↓', title: 'Bottom Center' },
+  { value: 'bottom right', label: '↘', title: 'Bottom Right' },
 ]
 
 const DEFAULT_FORM = {
-  imageUrl: '',
-  imageFocus: 'center',
-  videoUrl: '',
-  heading: '',
-  headingItalic: '',
-  subheading: '',
-  badgeText: '',
-  ctaLabel: 'Shop Now',
-  ctaUrl: '/shop',
-  ctaSecondaryLabel: '',
-  ctaSecondaryUrl: '',
-  overlayStyle: 'dark',
-  textColor: 'white',
-  isActive: true,
-  displayOrder: 0,
+  imageUrl: '', imageFocus: 'center', videoUrl: '',
+  heading: '', headingItalic: '', subheading: '', badgeText: '',
+  ctaLabel: 'Shop Now', ctaUrl: '/shop',
+  ctaSecondaryLabel: '', ctaSecondaryUrl: '',
+  overlayStyle: 'dark', textColor: 'white', isActive: true,
 }
+
+// Defined OUTSIDE component — prevents focus loss on every keystroke
+const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <label className="text-xs text-gray-600 mb-1 block font-medium">{label}</label>
+    {children}
+  </div>
+)
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<any[]>([])
@@ -73,35 +71,20 @@ export default function BannersPage() {
       fd.append('folder', 'skss/banners')
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cfg.value}/image/upload`, { method: 'POST', body: fd })
       const data = await res.json()
-      if (data.secure_url) {
-        setForm((p: any) => ({ ...p, imageUrl: data.secure_url }))
-        toast.success('Image uploaded!')
-      } else {
-        toast.error('Upload failed')
-      }
-    } catch {
-      toast.error('Upload error')
-    }
+      if (data.secure_url) { setForm((p: any) => ({ ...p, imageUrl: data.secure_url })); toast.success('Image uploaded!') }
+      else toast.error('Upload failed')
+    } catch { toast.error('Upload error') }
     setUploading(false)
   }
 
   const save = async () => {
     if (!form.imageUrl) { toast.error('Please upload a banner image'); return }
     const payload = {
-      image_url: form.imageUrl,
-      image_focus: form.imageFocus,
-      video_url: form.videoUrl || null,
-      heading: form.heading,
-      heading_italic: form.headingItalic,
-      subheading: form.subheading || null,
-      badge_text: form.badgeText || null,
-      cta_label: form.ctaLabel,
-      cta_url: form.ctaUrl,
-      cta_secondary_label: form.ctaSecondaryLabel || null,
-      cta_secondary_url: form.ctaSecondaryUrl || null,
-      overlay_style: form.overlayStyle,
-      text_color: form.textColor,
-      is_active: form.isActive,
+      image_url: form.imageUrl, image_focus: form.imageFocus, video_url: form.videoUrl || null,
+      heading: form.heading, heading_italic: form.headingItalic, subheading: form.subheading || null,
+      badge_text: form.badgeText || null, cta_label: form.ctaLabel, cta_url: form.ctaUrl,
+      cta_secondary_label: form.ctaSecondaryLabel || null, cta_secondary_url: form.ctaSecondaryUrl || null,
+      overlay_style: form.overlayStyle, text_color: form.textColor, is_active: form.isActive,
     }
     if (editId) {
       const { data } = await supabase.from('banners').update(payload).eq('id', editId).select().single()
@@ -115,29 +98,17 @@ export default function BannersPage() {
     resetForm()
   }
 
-  const resetForm = () => {
-    setShowForm(false); setEditId(null); setForm({ ...DEFAULT_FORM })
-  }
+  const resetForm = () => { setShowForm(false); setEditId(null); setForm({ ...DEFAULT_FORM }) }
 
   const startEdit = (b: any) => {
     setForm({
-      imageUrl: b.image_url || '',
-      imageFocus: b.image_focus || 'center',
-      videoUrl: b.video_url || '',
-      heading: b.heading || '',
-      headingItalic: b.heading_italic || '',
-      subheading: b.subheading || '',
-      badgeText: b.badge_text || '',
-      ctaLabel: b.cta_label || 'Shop Now',
-      ctaUrl: b.cta_url || '/shop',
-      ctaSecondaryLabel: b.cta_secondary_label || '',
-      ctaSecondaryUrl: b.cta_secondary_url || '',
-      overlayStyle: b.overlay_style || 'dark',
-      textColor: b.text_color || 'white',
-      isActive: b.is_active,
+      imageUrl: b.image_url || '', imageFocus: b.image_focus || 'center', videoUrl: b.video_url || '',
+      heading: b.heading || '', headingItalic: b.heading_italic || '', subheading: b.subheading || '',
+      badgeText: b.badge_text || '', ctaLabel: b.cta_label || 'Shop Now', ctaUrl: b.cta_url || '/shop',
+      ctaSecondaryLabel: b.cta_secondary_label || '', ctaSecondaryUrl: b.cta_secondary_url || '',
+      overlayStyle: b.overlay_style || 'dark', textColor: b.text_color || 'white', isActive: b.is_active,
     })
-    setEditId(b.id)
-    setShowForm(true)
+    setEditId(b.id); setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -166,13 +137,6 @@ export default function BannersPage() {
     setBanners(updated.sort((x, y) => x.display_order - y.display_order))
   }
 
-  const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="text-xs text-gray-600 mb-1 block font-medium">{label}</label>
-      {children}
-    </div>
-  )
-
   return (
     <AdminLayout>
       <div className="max-w-4xl">
@@ -181,7 +145,7 @@ export default function BannersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Hero Banners</h1>
             <p className="text-sm text-gray-500 mt-0.5">Customise the homepage hero section</p>
           </div>
-          <button onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary">
+          <button type="button" onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary">
             <Plus size={16} /> Add Banner
           </button>
         </div>
@@ -190,34 +154,25 @@ export default function BannersPage() {
           <div className="card p-6 mb-6 border-2" style={{ borderColor: 'var(--crimson)', borderStyle: 'solid' }}>
             <h3 className="font-semibold text-gray-900 mb-5 text-lg">{editId ? 'Edit Banner' : 'New Banner'}</h3>
 
-            {/* ── IMAGE UPLOAD ── */}
+            {/* IMAGE */}
             <div className="mb-5">
               <label className="text-xs text-gray-600 mb-2 block font-medium">Banner Image *</label>
               <input ref={fileRef} type="file" className="hidden" accept="image/*"
                 onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
-
               {form.imageUrl ? (
                 <div className="space-y-3">
-                  {/* Image preview with focus point overlay */}
                   <div className="relative w-full rounded-lg overflow-hidden border border-gray-200" style={{ height: 200 }}>
-                    <img src={form.imageUrl} alt="Banner preview"
-                      className="w-full h-full"
+                    <img src={form.imageUrl} alt="Banner preview" className="w-full h-full"
                       style={{ objectFit: 'cover', objectPosition: form.imageFocus }} />
                     <div className="absolute inset-0 bg-black/20 flex items-end p-3">
-                      <span className="text-white text-xs bg-black/50 px-2 py-1 rounded">
-                        Preview — Focus: {form.imageFocus}
-                      </span>
+                      <span className="text-white text-xs bg-black/50 px-2 py-1 rounded">Preview — Focus: {form.imageFocus}</span>
                     </div>
                   </div>
-
-                  {/* Focus point selector */}
                   <div>
-                    <label className="text-xs text-gray-600 mb-2 block font-medium">
-                      Image Focus Point — choose which part of the image to show
-                    </label>
+                    <label className="text-xs text-gray-600 mb-2 block font-medium">Image Focus Point</label>
                     <div className="grid grid-cols-3 gap-1 w-32">
                       {FOCUS_POINTS.map(fp => (
-                        <button key={fp.value} title={fp.title}
+                        <button key={fp.value} type="button" title={fp.title}
                           onClick={() => setForm((p: any) => ({ ...p, imageFocus: fp.value }))}
                           className="h-9 w-9 text-sm font-bold rounded border transition-all flex items-center justify-center"
                           style={{
@@ -229,44 +184,35 @@ export default function BannersPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Click a position to set where the image is anchored</p>
+                    <p className="text-xs text-gray-400 mt-1">Click to anchor image position</p>
                   </div>
-
-                  <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
                     className="btn btn-secondary text-xs flex items-center gap-1">
                     <Upload size={12} /> {uploading ? 'Uploading...' : 'Change Image'}
                   </button>
                 </div>
               ) : (
-                <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
                   className="w-full h-32 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-red-300 transition-colors">
-                  {uploading ? (
-                    <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Upload size={20} className="text-gray-400" />
-                      <p className="text-xs text-gray-400">Click to upload banner image</p>
-                      <p className="text-xs text-gray-300">Recommended: 1920×1080px or wider</p>
-                    </>
-                  )}
+                  {uploading
+                    ? <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    : <><Upload size={20} className="text-gray-400" /><p className="text-xs text-gray-400">Click to upload banner image</p><p className="text-xs text-gray-300">Recommended: 1920×1080px or wider</p></>
+                  }
                 </button>
               )}
             </div>
 
-            {/* ── TEXT CONTENT ── */}
+            {/* VIDEO */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-1">Background Video (Optional)</p>
-              <p className="text-xs text-gray-400 mb-3">If set, video plays instead of image. Upload MP4 to Cloudinary and paste the URL. Keep under 10MB for fast loading.</p>
-              <input
-                className="input"
-                value={form.videoUrl}
+              <p className="text-xs text-gray-400 mb-3">Upload MP4 to Cloudinary and paste URL. Keep under 10MB for fast loading.</p>
+              <input className="input" value={form.videoUrl}
                 onChange={e => setForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
-                placeholder="https://res.cloudinary.com/.../video.mp4 (optional)"
-              />
-              {form.videoUrl && (
-                <p className="text-xs text-green-600 mt-1">✓ Video URL set — will play as background on homepage hero</p>
-              )}
+                placeholder="https://res.cloudinary.com/.../video.mp4 (optional)" />
+              {form.videoUrl && <p className="text-xs text-green-600 mt-1">✓ Video URL set</p>}
             </div>
+
+            {/* TEXT */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Text Content</p>
               <div className="grid grid-cols-2 gap-4">
@@ -281,13 +227,13 @@ export default function BannersPage() {
                     onChange={e => setForm((p: any) => ({ ...p, heading: e.target.value }))}
                     placeholder="e.g. Draped in" />
                 </F>
-                <F label="Heading Italic Part (shown in gold italic)">
+                <F label="Heading Italic Part (gold italic)">
                   <input className="input" value={form.headingItalic}
                     onChange={e => setForm((p: any) => ({ ...p, headingItalic: e.target.value }))}
                     placeholder="e.g. Royal Elegance" />
                 </F>
                 <div className="col-span-2">
-                  <F label="Subheading (description paragraph)">
+                  <F label="Subheading (description)">
                     <textarea className="input" rows={2} value={form.subheading}
                       onChange={e => setForm((p: any) => ({ ...p, subheading: e.target.value }))}
                       placeholder="e.g. Discover timeless silk sarees crafted for the modern woman." />
@@ -296,7 +242,7 @@ export default function BannersPage() {
               </div>
             </div>
 
-            {/* ── CTA BUTTONS ── */}
+            {/* CTA */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Call to Action Buttons</p>
               <div className="grid grid-cols-2 gap-4">
@@ -323,7 +269,7 @@ export default function BannersPage() {
               </div>
             </div>
 
-            {/* ── STYLING ── */}
+            {/* STYLE */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Style & Overlay</p>
               <div className="grid grid-cols-2 gap-4">
@@ -342,7 +288,7 @@ export default function BannersPage() {
               </div>
             </div>
 
-            {/* ── VISIBILITY ── */}
+            {/* VISIBILITY */}
             <div className="border-t border-gray-100 pt-4 mb-5">
               <label className="flex items-center gap-2 cursor-pointer text-sm">
                 <input type="checkbox" checked={form.isActive}
@@ -353,39 +299,33 @@ export default function BannersPage() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={save} className="btn btn-primary">{editId ? 'Update Banner' : 'Add Banner'}</button>
-              <button onClick={resetForm} className="btn btn-secondary">Cancel</button>
+              <button type="button" onClick={save} className="btn btn-primary">
+                {editId ? 'Update Banner' : 'Add Banner'}
+              </button>
+              <button type="button" onClick={resetForm} className="btn btn-secondary">Cancel</button>
             </div>
           </div>
         )}
 
-        {/* ── BANNER LIST ── */}
+        {/* BANNER LIST */}
         <div className="space-y-3">
           {banners.map((b, idx) => (
             <div key={b.id} className="card p-4 flex gap-4 items-center">
-              {/* Reorder */}
               <div className="flex flex-col gap-1">
-                <button onClick={() => moveOrder(b.id, 'up')} disabled={idx === 0}
+                <button type="button" onClick={() => moveOrder(b.id, 'up')} disabled={idx === 0}
                   className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"><ChevronUp size={14} /></button>
-                <button onClick={() => moveOrder(b.id, 'down')} disabled={idx === banners.length - 1}
+                <button type="button" onClick={() => moveOrder(b.id, 'down')} disabled={idx === banners.length - 1}
                   className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"><ChevronDown size={14} /></button>
               </div>
-
-              {/* Thumbnail */}
               <div className="w-36 h-20 rounded overflow-hidden flex-shrink-0 bg-gray-100 relative border border-gray-200">
                 {b.image_url && (
-                  <img src={b.image_url} alt={b.heading}
-                    className="w-full h-full"
+                  <img src={b.image_url} alt={b.heading || 'Banner'} className="w-full h-full"
                     style={{ objectFit: 'cover', objectPosition: b.image_focus || 'center' }} />
                 )}
                 <div className="absolute bottom-1 right-1">
-                  <span className="text-xs bg-black/60 text-white px-1.5 py-0.5 rounded">
-                    {b.image_focus || 'center'}
-                  </span>
+                  <span className="text-xs bg-black/60 text-white px-1.5 py-0.5 rounded">{b.image_focus || 'center'}</span>
                 </div>
               </div>
-
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold text-gray-900 truncate">
@@ -402,19 +342,14 @@ export default function BannersPage() {
                   <span>Overlay: {b.overlay_style || 'dark'}</span>
                 </div>
               </div>
-
-              {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => startEdit(b)}
-                  className="p-1.5 hover:bg-gray-100 rounded" title="Edit">
+                <button type="button" onClick={() => startEdit(b)} className="p-1.5 hover:bg-gray-100 rounded" title="Edit">
                   <Edit size={14} style={{ color: 'var(--crimson)' }} />
                 </button>
-                <button onClick={() => toggleActive(b.id, b.is_active)}
-                  className="p-1.5 hover:bg-gray-100 rounded" title={b.is_active ? 'Hide' : 'Show'}>
+                <button type="button" onClick={() => toggleActive(b.id, b.is_active)} className="p-1.5 hover:bg-gray-100 rounded" title={b.is_active ? 'Hide' : 'Show'}>
                   {b.is_active ? <EyeOff size={14} className="text-gray-400" /> : <Eye size={14} className="text-green-500" />}
                 </button>
-                <button onClick={() => del(b.id)}
-                  className="p-1.5 hover:bg-red-50 rounded" title="Delete">
+                <button type="button" onClick={() => del(b.id)} className="p-1.5 hover:bg-red-50 rounded" title="Delete">
                   <Trash2 size={14} className="text-red-400" />
                 </button>
               </div>
