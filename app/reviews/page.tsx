@@ -5,6 +5,16 @@ import { supabase } from '@/lib/supabase'
 import { Star, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// Fix #8 — Stars moved outside component (no inputs so no focus loss, but correct practice)
+const StarRating = ({ rating }: { rating: number }) => (
+  <div className="flex gap-0.5">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Star key={i} size={14} fill={i < rating ? '#C9A84C' : 'none'}
+        stroke={i < rating ? '#C9A84C' : '#D1D5DB'} />
+    ))}
+  </div>
+)
+
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,15 +46,6 @@ export default function ReviewsPage() {
     toast.success('Review deleted')
   }
 
-  const Stars = ({ rating }: { rating: number }) => (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} size={14} fill={i < rating ? '#C9A84C' : 'none'}
-          stroke={i < rating ? '#C9A84C' : '#D1D5DB'} />
-      ))}
-    </div>
-  )
-
   return (
     <AdminLayout>
       <div className="max-w-4xl">
@@ -58,7 +59,7 @@ export default function ReviewsPage() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200">
           {(['pending', 'approved'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+            <button key={t} type="button" onClick={() => setTab(t)}
               className="px-4 py-2 text-sm font-medium capitalize transition-colors"
               style={{
                 color: tab === t ? 'var(--crimson)' : '#6B7280',
@@ -71,7 +72,9 @@ export default function ReviewsPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400 text-center py-10">Loading...</p>
+          <div className="text-center py-10">
+            <div className="inline-block w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--crimson)', borderTopColor: 'transparent' }} />
+          </div>
         ) : reviews.length === 0 ? (
           <div className="card p-10 text-center text-sm text-gray-400">
             {tab === 'pending' ? 'No reviews pending approval' : 'No approved reviews yet'}
@@ -82,41 +85,29 @@ export default function ReviewsPage() {
               <div key={r.id} className="card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    {/* Product */}
-                    <p className="text-xs font-semibold uppercase tracking-wide mb-1"
-                      style={{ color: 'var(--crimson)' }}>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--crimson)' }}>
                       {r.products?.name || 'Unknown Product'}
                     </p>
-                    {/* Customer */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-sm font-medium text-gray-900">
-                        {r.profiles?.full_name || 'Anonymous'}
-                      </p>
-                      <p className="text-xs text-gray-400">{r.profiles?.email}</p>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <p className="text-sm font-medium text-gray-900">{r.profiles?.full_name || 'Anonymous'}</p>
+                      <p className="text-xs text-gray-400 hidden sm:block">{r.profiles?.email}</p>
                     </div>
-                    {/* Rating */}
-                    <Stars rating={r.rating} />
-                    {/* Comment */}
+                    <StarRating rating={r.rating} />
                     <p className="text-sm text-gray-700 mt-2 leading-relaxed">{r.comment}</p>
-                    {/* Date */}
                     <p className="text-xs text-gray-400 mt-2">
-                      {new Date(r.created_at).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                      })}
+                      {new Date(r.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
                     </p>
                   </div>
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
                     {tab === 'pending' && (
-                      <button onClick={() => approve(r.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded"
+                      <button type="button" onClick={() => approve(r.id)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white rounded"
                         style={{ background: '#16A34A' }}>
                         <Check size={13} /> Approve
                       </button>
                     )}
-                    <button onClick={() => reject(r.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded"
+                    <button type="button" onClick={() => reject(r.id)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white rounded"
                       style={{ background: '#DC2626' }}>
                       <X size={13} /> Delete
                     </button>

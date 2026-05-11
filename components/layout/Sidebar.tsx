@@ -53,7 +53,7 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
     router.push('/login')
   }
 
-  const NavContent = () => (
+  const navContent = (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-white/10 flex items-center gap-3">
         <Image src={logoUrl} alt={brandName} width={32} height={32} className="object-contain rounded" />
@@ -92,7 +92,7 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
 
   return (
     <>
-      <button className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white"
+      <button type="button" className="fixed top-4 left-4 z-50 md:hidden p-2 rounded bg-gray-900 text-white"
         onClick={() => setOpen(!open)}>
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
@@ -102,11 +102,11 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
       )}
       <div className={`fixed left-0 top-0 bottom-0 z-40 w-56 md:hidden transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ background: '#1A1A1A' }}>
-        <NavContent />
+        {navContent}
       </div>
       <div className="hidden md:flex flex-col w-56 flex-shrink-0 h-screen sticky top-0"
         style={{ background: '#1A1A1A' }}>
-        <NavContent />
+        {navContent}
       </div>
     </>
   )

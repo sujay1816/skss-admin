@@ -81,7 +81,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <button onClick={() => router.back()} className="text-xs text-gray-500 mb-1 hover:underline">← Orders</button>
+            <button type="button" onClick={() => router.back()} className="text-xs text-gray-500 mb-1 hover:underline">← Orders</button>
             <h1 className="text-2xl font-bold text-gray-900">
               {order.order_number || `#${order.id.slice(0,8).toUpperCase()}`}
             </h1>
@@ -143,7 +143,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                 </p>
               )}
               {waNotified && <p className="text-xs mt-3 text-green-600">✓ WhatsApp notification already sent</p>}
-              <button onClick={save} disabled={saving} className="btn btn-primary mt-4">
+              <button type="button" onClick={save} disabled={saving} className="btn btn-primary mt-4">
                 {saving ? 'Saving...' : 'Update Order'}
               </button>
             </div>

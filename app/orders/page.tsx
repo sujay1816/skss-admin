@@ -60,7 +60,36 @@ export default function OrdersPage() {
               ))}
             </select>
           </div>
-          <div className="overflow-x-auto">
+          {/* Fix #15 — Mobile card layout for orders */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {filtered.map(o => (
+              <div key={o.id} className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-mono font-semibold text-xs" style={{ color: 'var(--crimson)' }}>
+                      {o.order_number || `#${o.id.slice(0,8).toUpperCase()}`}
+                    </p>
+                    <p className="font-medium text-gray-900 text-sm">{o.profiles?.full_name || '—'}</p>
+                    <p className="text-xs text-gray-400">{o.profiles?.phone || o.profiles?.email}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">₹{Number(o.total_amount).toLocaleString('en-IN')}</p>
+                    <span className="badge text-white text-xs capitalize" style={{ background: STATUS_COLORS[o.status] || '#6B7280' }}>
+                      {o.status.replace(/_/g,' ')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-400">
+                    {new Date(o.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                  </p>
+                  <a href={`/orders/${o.id}`} className="text-xs font-medium" style={{ color: 'var(--crimson)' }}>Manage →</a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -103,6 +132,7 @@ export default function OrdersPage() {
             {filtered.length === 0 && (
               <p className="text-center py-12 text-sm text-gray-400">{loading ? 'Loading...' : 'No orders found'}</p>
             )}
+          </div>
           </div>
         </div>
       </div>

@@ -17,18 +17,36 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
+
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
+
   if (path === '/login') {
     if (user) {
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      if (profile && ['staff','manager','superadmin'].includes(profile.role)) return NextResponse.redirect(new URL('/dashboard', request.url))
+      const { data: profile } = await supabase.from('profiles')
+        .select('role, is_blocked').eq('id', user.id).single()
+      // Security fix — also check is_blocked on redirect
+      if (profile && ['staff','manager','superadmin'].includes(profile.role) && !profile.is_blocked) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
     return response
   }
+
   if (!user) return NextResponse.redirect(new URL('/login', request.url))
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || !['staff','manager','superadmin'].includes(profile.role)) return NextResponse.redirect(new URL('/login?error=unauthorized', request.url))
+
+  const { data: profile } = await supabase.from('profiles')
+    .select('role, is_blocked').eq('id', user.id).single()
+
+  // Security fix — check role AND is_blocked on every request
+  if (!profile || !['staff','manager','superadmin'].includes(profile.role)) {
+    return NextResponse.redirect(new URL('/login?error=unauthorized', request.url))
+  }
+  if (profile.is_blocked) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(new URL('/login?error=blocked', request.url))
+  }
+
   return response
 }
 
