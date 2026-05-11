@@ -22,6 +22,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [variants, setVariants] = useState<any[]>([])
   const [images, setImages] = useState<any[]>([])
   const [videoUrl, setVideoUrl] = useState<string>('')
+  const [fabrics, setFabrics] = useState<string[]>(['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'])
+  const [weaveTypes, setWeaveTypes] = useState<string[]>(['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'])
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadingVideo, setUploadingVideo] = useState(false)
@@ -37,6 +39,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       setVariants(v || [])
       setImages(imgs || [])
       setVideoUrl(p?.video_url || '')
+      const { data: fabricCfg } = await supabase.from('site_config').select('value').eq('key', 'fabric_types').single()
+      if (fabricCfg?.value) { try { setFabrics(JSON.parse(fabricCfg.value)) } catch {} }
+      const { data: weavesData } = await supabase.from('products').select('weave_type').not('weave_type', 'is', null)
+      if (weavesData) {
+        const base = ['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom']
+        const unique = [...new Set([...base, ...weavesData.map((r: any) => r.weave_type).filter(Boolean)])]
+        setWeaveTypes(unique as string[])
+      }
     }
     load()
   }, [params.id])
@@ -194,7 +204,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             <F label="Fabric">
               <select className="input" value={form.fabric || ''} onChange={e => setForm((p: any) => ({ ...p, fabric: e.target.value }))}>
                 <option value="">Select fabric...</option>
-                {['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'].map(f => <option key={f} value={f}>{f}</option>)}
+                {fabrics.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </F>
             <F label="Weave Type">
@@ -202,7 +212,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 onChange={e => setForm((p: any) => ({ ...p, weave_type: e.target.value }))}
                 placeholder="Type or select..." />
               <datalist id="weave-list-edit">
-                {['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'].map(w => <option key={w} value={w} />)}
+                {weaveTypes.map(w => <option key={w} value={w} />)}
               </datalist>
             </F>
             <F label="Origin / Region">

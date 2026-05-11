@@ -18,10 +18,25 @@ export default function NewProductPage() {
   const [uploading, setUploading] = useState(false)
   const [variants, setVariants] = useState([{ colour: '', colourHex: '#8B1A2B', stock: 0, sku: '' }])
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([])
+  const [fabrics, setFabrics] = useState<string[]>(['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'])
+  const [weaveTypes, setWeaveTypes] = useState<string[]>(['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'])
   const [form, setForm] = useState({ name: '', slug: '', description: '', fabric: '', weaveType: '', originRegion: '', careInstructions: 'Dry clean only', blouseIncluded: false, length: '5.5', weightGrams: '', categoryId: '', originalPrice: '', salePrice: '', discountPercent: '', gstRate: '5', isFeatured: false, isBestseller: false, isActive: true })
 
   useEffect(() => {
     supabase.from('categories').select('id,name').eq('is_active', true).then(({ data }) => setCategories(data || []))
+    // Load fabrics from site_config so admin-managed list is always up to date
+    supabase.from('site_config').select('value').eq('key', 'fabric_types').single().then(({ data }) => {
+      if (data?.value) {
+        try { setFabrics(JSON.parse(data.value)) } catch {}
+      }
+    })
+    // Load existing weave types from products for autocomplete
+    supabase.from('products').select('weave_type').not('weave_type', 'is', null).then(({ data }) => {
+      if (data) {
+        const unique = [...new Set([...weaveTypes, ...data.map((r: any) => r.weave_type).filter(Boolean)])]
+        setWeaveTypes(unique as string[])
+      }
+    })
   }, [])
 
   const genSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substr(2, 4)
@@ -86,7 +101,7 @@ export default function NewProductPage() {
                 <F label="Fabric Type">
                   <select className="input" value={form.fabric} onChange={e => setForm(p => ({ ...p, fabric: e.target.value }))}>
                     <option value="">Select fabric...</option>
-                    {['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'].map(f => <option key={f} value={f}>{f}</option>)}
+                    {fabrics.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </F>
                 <F label="Weave Type">
@@ -94,7 +109,7 @@ export default function NewProductPage() {
                     onChange={e => setForm(p => ({ ...p, weaveType: e.target.value }))}
                     placeholder="Type or select..." />
                   <datalist id="weave-list">
-                    {['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'].map(w => <option key={w} value={w} />)}
+                    {weaveTypes.map(w => <option key={w} value={w} />)}
                   </datalist>
                 </F>
                 <F label="Origin / Region"><input className="input" value={form.originRegion} onChange={e => setForm(p => ({ ...p, originRegion: e.target.value }))} placeholder="Kanjivaram, Tamil Nadu..." /></F>

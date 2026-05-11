@@ -57,6 +57,73 @@ const DEFAULT_COLORS = {
   color_page_bg: '#FDFAF7',
 }
 
+
+const DEFAULT_FABRICS = ['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose']
+
+// FabricsManager — defined outside to prevent focus loss
+const FabricsManager = ({ config, setConfig }: { config: Record<string,string>; setConfig: (fn: (p: Record<string,string>) => Record<string,string>) => void }) => {
+  const [newFabric, setNewFabric] = useState('')
+  const fabrics: string[] = (() => {
+    try { return JSON.parse(config.fabric_types || '[]') } catch { return DEFAULT_FABRICS }
+  })()
+  const saveFabrics = (list: string[]) => {
+    setConfig(p => ({ ...p, fabric_types: JSON.stringify(list) }))
+  }
+  const add = () => {
+    const trimmed = newFabric.trim()
+    if (!trimmed) return
+    if (fabrics.includes(trimmed)) { return }
+    saveFabrics([...fabrics, trimmed])
+    setNewFabric('')
+  }
+  const remove = (fabric: string) => saveFabrics(fabrics.filter(f => f !== fabric))
+  const resetToDefault = () => saveFabrics(DEFAULT_FABRICS)
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="font-semibold text-gray-900">Fabric Types</h2>
+        <button type="button" onClick={resetToDefault} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+          <RefreshCw size={12} /> Reset to defaults
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        These appear as a dropdown when adding/editing products, and as filter chips on the shop page. Add new fabrics here — they appear everywhere instantly after saving.
+      </p>
+
+      {/* Current fabrics */}
+      <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg min-h-12" style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+        {fabrics.length === 0 && <p className="text-xs text-gray-400">No fabrics — click Reset to restore defaults</p>}
+        {fabrics.map(f => (
+          <span key={f} className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full text-white" style={{ background: 'var(--crimson)' }}>
+            {f}
+            <button type="button" onClick={() => remove(f)} className="hover:opacity-70 transition-opacity" title={`Remove ${f}`}>
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+
+      {/* Add new fabric */}
+      <div className="flex gap-2">
+        <input
+          className="input flex-1"
+          value={newFabric}
+          onChange={e => setNewFabric(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder="Type new fabric name e.g. Raw Silk, Organza Silk..."
+          style={{ height: 38 }}
+        />
+        <button type="button" onClick={add}
+          className="btn btn-primary flex-shrink-0" style={{ height: 38, padding: '0 16px' }}>
+          + Add
+        </button>
+      </div>
+      <p className="text-xs text-gray-400 mt-2">Press Enter or click Add. Click × on a fabric to remove it. Changes take effect after clicking Save All Changes.</p>
+    </div>
+  )
+}
+
 export default function ConfigPage() {
   const [config, setConfig] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -117,7 +184,7 @@ export default function ConfigPage() {
             <h1 className="text-2xl font-bold text-gray-900">Site Configuration</h1>
             <p className="text-sm text-gray-500 mt-0.5">Changes appear on storefront immediately after saving</p>
           </div>
-          <button onClick={save} disabled={saving} className="btn btn-primary">
+          <button type="button" onClick={save} disabled={saving} className="btn btn-primary">
             {saving ? 'Saving...' : 'Save All Changes'}
           </button>
         </div>
@@ -125,7 +192,7 @@ export default function ConfigPage() {
         {/* Tabs */}
         <div className="flex gap-0 mb-6 border-b border-gray-200">
           {[['brand', '🎨 Brand & Design'], ['settings', '⚙️ Store Settings']].map(([tab, label]) => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)}
+            <button type="button" key={tab} onClick={() => setActiveTab(tab as any)}
               className="px-5 py-3 text-sm font-medium border-b-2 transition-all"
               style={{ borderBottomColor: activeTab === tab ? 'var(--crimson)' : 'transparent', color: activeTab === tab ? 'var(--crimson)' : '#6B7280' }}>
               {label}
@@ -167,7 +234,7 @@ export default function ConfigPage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-gray-900">Brand Colors</h2>
-                <button onClick={resetColors} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                <button type="button" onClick={resetColors} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
                   <RefreshCw size={12} /> Reset to defaults
                 </button>
               </div>
@@ -264,11 +331,14 @@ export default function ConfigPage() {
                 </div>
               </div>
             ))}
+
+            {/* ── FABRIC TYPES MANAGER ── */}
+            <FabricsManager config={config} setConfig={setConfig} />
           </div>
         )}
 
         <div className="sticky bottom-6 flex justify-end mt-6">
-          <button onClick={save} disabled={saving} className="btn btn-primary shadow-lg">
+          <button type="button" onClick={save} disabled={saving} className="btn btn-primary shadow-lg">
             {saving ? 'Saving...' : 'Save All Changes'}
           </button>
         </div>
