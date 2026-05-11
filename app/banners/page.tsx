@@ -374,7 +374,7 @@ export default function BannersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold text-gray-900 truncate">
-                    {b.heading}{b.heading_italic ? ` + "${b.heading_italic}"` : ''|| '(No heading)'}
+                    {b.heading || '(No heading)'}{b.heading_italic ? ` + "${b.heading_italic}"` : ''}
                   </p>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {b.is_active ? 'Active' : 'Hidden'}
