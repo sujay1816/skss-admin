@@ -17,6 +17,7 @@ const NAV = [
   { label: 'Coupons', href: '/coupons', icon: Tag },
   { label: 'Returns', href: '/returns', icon: RotateCcw },
   { label: 'Reviews', href: '/reviews', icon: Star },
+  { label: 'Notifications', href: '/notifications', icon: Bell },
   { label: 'Banners', href: '/banners', icon: ImgIcon },
   { label: 'Categories', href: '/categories', icon: FolderOpen },
   { label: 'Staff', href: '/staff', icon: UserCog },
@@ -63,16 +64,6 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
       </div>
 
       <nav className="flex-1 py-3 overflow-y-auto">
-        <Link href="/notifications"
-          className={`flex items-center justify-between px-4 py-2.5 mx-2 rounded transition-all text-sm mb-1 ${pathname === '/notifications' ? 'bg-red-900/60 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
-          <div className="flex items-center gap-3"><Bell size={16} /> Notifications</div>
-          {unreadCount && unreadCount > 0 ? (
-            <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          ) : null}
-        </Link>
-
         {NAV.map(({ label, href, icon: Icon }) => {
           const active = pathname === href || (href !== '/products' && pathname.startsWith(href))
           return (
@@ -80,6 +71,11 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
               className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded transition-all text-sm mb-0.5 ${active ? 'text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
               style={{ background: active ? 'var(--crimson, #8B1A2B)' : 'transparent' }}>
               <Icon size={16} /> {label}
+              {label === 'Notifications' && unreadCount && unreadCount > 0 ? (
+                <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              ) : null}
             </Link>
           )
         })}

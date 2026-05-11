@@ -45,12 +45,19 @@ export default function BulkProductPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [cloudName, setCloudName] = useState('')
+  const [fabrics, setFabrics] = useState<string[]>(['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'])
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
     supabase.from('categories').select('id, name').eq('is_active', true).then(({ data }) => setCategories(data || []))
-    supabase.from('site_config').select('value').eq('key', 'cloudinary_cloud_name').single()
-      .then(({ data }) => { if (data?.value) setCloudName(data.value) })
+    supabase.from('site_config').select('key,value').in('key', ['cloudinary_cloud_name', 'fabric_types'])
+      .then(({ data }) => {
+        if (!data) return
+        data.forEach((r: any) => {
+          if (r.key === 'cloudinary_cloud_name' && r.value) setCloudName(r.value)
+          if (r.key === 'fabric_types' && r.value) { try { setFabrics(JSON.parse(r.value)) } catch {} }
+        })
+      })
   }, [])
 
   const update = (id: string, field: keyof BulkProduct, value: any) => {
@@ -193,10 +200,10 @@ export default function BulkProductPage() {
             <p className="text-sm text-gray-500 mt-0.5">Add multiple products at once with images</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={addRow} className="btn btn-secondary flex items-center gap-2">
+            <button type="button" onClick={addRow} className="btn btn-secondary flex items-center gap-2">
               <Plus size={16} /> Add Row
             </button>
-            <button onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2">
+            <button type="button" onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2">
               <Save size={16} />{saving ? 'Saving...' : `Save All (${rows.filter(r => r.name).length})`}
             </button>
           </div>
@@ -221,7 +228,7 @@ export default function BulkProductPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-700">Product #{idx + 1}</h3>
                 {rows.length > 1 && (
-                  <button onClick={() => removeRow(row.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                  <button type="button" onClick={() => removeRow(row.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                     <X size={18} />
                   </button>
                 )}
@@ -266,7 +273,10 @@ export default function BulkProductPage() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 font-medium mb-1 block">Fabric</label>
-                    <input className="input" value={row.fabric} onChange={e => update(row.id, 'fabric', e.target.value)} placeholder="Silk, Cotton..." />
+                    <select className="input" value={row.fabric} onChange={e => update(row.id, 'fabric', e.target.value)}>
+                      <option value="">Select fabric...</option>
+                      {fabrics.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 font-medium mb-1 block">Original Price (₹) *</label>
@@ -325,10 +335,10 @@ export default function BulkProductPage() {
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button onClick={addRow} className="btn btn-secondary flex items-center gap-2">
+          <button type="button" onClick={addRow} className="btn btn-secondary flex items-center gap-2">
             <Plus size={16} /> Add Another Product
           </button>
-          <button onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2 flex-1 justify-center">
+          <button type="button" onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2 flex-1 justify-center">
             <Save size={16} />{saving ? 'Creating Products...' : `Create ${rows.filter(r => r.name).length} Products`}
           </button>
         </div>

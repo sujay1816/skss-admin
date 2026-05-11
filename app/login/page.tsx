@@ -15,9 +15,7 @@ export default function AdminLoginPage() {
   const [logoUrl, setLogoUrl] = useState('/logo.png')
 
   useEffect(() => {
-    supabase.from('site_config')
-      .select('key, value')
-      .in('key', ['brand_name', 'brand_subtitle', 'logo_url'])
+    supabase.from('site_config').select('key, value').in('key', ['brand_name', 'brand_subtitle', 'logo_url'])
       .then(({ data }) => {
         if (!data) return
         const cfg: Record<string, string> = {}
@@ -33,12 +31,26 @@ export default function AdminLoginPage() {
     setLoading(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { toast.error(error.message); setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
+
+    const { data: profile } = await supabase.from('profiles')
+      .select('role, is_blocked')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    // Security fix — check role
     if (!profile || !['staff', 'manager', 'superadmin'].includes(profile.role)) {
       await supabase.auth.signOut()
       toast.error('Access denied. Admin accounts only.')
       setLoading(false); return
     }
+
+    // Security fix — check if account is blocked
+    if (profile.is_blocked) {
+      await supabase.auth.signOut()
+      toast.error('Your account has been suspended. Contact the superadmin.')
+      setLoading(false); return
+    }
+
     router.push('/dashboard')
   }
 
