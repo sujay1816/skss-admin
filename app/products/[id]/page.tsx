@@ -7,6 +7,11 @@ import { Plus, Trash2, Upload, X, Star } from 'lucide-react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
+// Moved outside component to prevent focus loss on re-render
+const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div><label className="text-xs text-gray-600 mb-1 block">{label}</label>{children}</div>
+)
+
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [form, setForm] = useState<any>(null)
@@ -139,10 +144,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   if (!form) return <AdminLayout><div className="text-center py-20 text-sm text-gray-400">Loading...</div></AdminLayout>
-
-  const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div><label className="text-xs text-gray-600 mb-1 block">{label}</label>{children}</div>
-  )
 
   return (
     <AdminLayout>
