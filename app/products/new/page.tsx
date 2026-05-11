@@ -7,8 +7,6 @@ import { Plus, Trash2, Upload, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const OCCASIONS = ['Wedding','Festive','Casual','Office','Party','Religious','Daily Wear']
-const WEAVE_TYPES = ['Handloom','Powerloom','Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','None']
-
 const F = ({ label, children, col2 }: { label: string; children: React.ReactNode; col2?: boolean }) => (
     <div className={col2 ? 'col-span-2' : ''}><label className="text-xs text-gray-600 font-medium mb-1 block">{label}</label>{children}</div>
   )
@@ -74,7 +72,7 @@ export default function NewProductPage() {
           <h1 className="text-2xl font-bold text-gray-900">New Product</h1>
           <div className="flex gap-3">
             <button onClick={() => router.back()} className="btn btn-secondary">Cancel</button>
-            <button onClick={handleSubmit} disabled={loading} className="btn btn-primary">{loading ? 'Saving...' : 'Save Product'}</button>
+            <button type="button" onClick={handleSubmit} disabled={loading} className="btn btn-primary">{loading ? 'Saving...' : 'Save Product'}</button>
           </div>
         </div>
 
@@ -85,8 +83,20 @@ export default function NewProductPage() {
               <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
               <div className="grid grid-cols-2 gap-4">
                 <F label="Product Name *" col2><input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value, slug: '' }))} /></F>
-                <F label="Fabric Type"><input className="input" value={form.fabric} onChange={e => setForm(p => ({ ...p, fabric: e.target.value }))} placeholder="Silk, Cotton..." /></F>
-                <F label="Weave Type"><select className="input" value={form.weaveType} onChange={e => setForm(p => ({ ...p, weaveType: e.target.value }))}><option value="">Select...</option>{WEAVE_TYPES.map(w => <option key={w}>{w}</option>)}</select></F>
+                <F label="Fabric Type">
+                  <select className="input" value={form.fabric} onChange={e => setForm(p => ({ ...p, fabric: e.target.value }))}>
+                    <option value="">Select fabric...</option>
+                    {['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'].map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </F>
+                <F label="Weave Type">
+                  <input className="input" list="weave-list" value={form.weaveType}
+                    onChange={e => setForm(p => ({ ...p, weaveType: e.target.value }))}
+                    placeholder="Type or select..." />
+                  <datalist id="weave-list">
+                    {['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'].map(w => <option key={w} value={w} />)}
+                  </datalist>
+                </F>
                 <F label="Origin / Region"><input className="input" value={form.originRegion} onChange={e => setForm(p => ({ ...p, originRegion: e.target.value }))} placeholder="Kanjivaram, Tamil Nadu..." /></F>
                 <F label="Length (meters)"><input className="input" type="number" step="0.1" value={form.length} onChange={e => setForm(p => ({ ...p, length: e.target.value }))} /></F>
                 <F label="Weight (grams)"><input className="input" type="number" value={form.weightGrams} onChange={e => setForm(p => ({ ...p, weightGrams: e.target.value }))} /></F>
@@ -123,7 +133,7 @@ export default function NewProductPage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-gray-900">Colour Variants & Stock</h2>
-                <button onClick={() => setVariants(prev => [...prev, { colour: '', colourHex: '#8B1A2B', stock: 0, sku: '' }])} className="btn btn-secondary text-xs"><Plus size={12} /> Add Colour</button>
+                <button type="button" onClick={() => setVariants(prev => [...prev, { colour: '', colourHex: '#8B1A2B', stock: 0, sku: '' }])} className="btn btn-secondary text-xs"><Plus size={12} /> Add Colour</button>
               </div>
               <div className="space-y-3">
                 {variants.map((v, i) => (
@@ -132,7 +142,7 @@ export default function NewProductPage() {
                     <div><label className="text-xs text-gray-500 mb-1 block">Swatch</label><input type="color" value={v.colourHex} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colourHex: e.target.value } : x))} className="w-10 h-10 border rounded cursor-pointer" style={{ borderColor: '#E5E7EB', padding: 2 }} /></div>
                     <div className="w-24"><label className="text-xs text-gray-500 mb-1 block">Stock</label><input type="number" className="input" value={v.stock} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Number(e.target.value) } : x))} /></div>
                     <div className="flex-1"><label className="text-xs text-gray-500 mb-1 block">SKU</label><input className="input" placeholder="Optional" value={v.sku} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} /></div>
-                    {variants.length > 1 && <button onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))} className="mb-0.5 p-2 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>}
+                    {variants.length > 1 && <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))} className="mb-0.5 p-2 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>}
                   </div>
                 ))}
               </div>
@@ -164,8 +174,8 @@ export default function NewProductPage() {
                       <img src={img.url} alt="" className="w-full h-full object-cover" />
                       {img.isPrimary && <span className="absolute top-0 left-0 right-0 text-center text-white text-xs py-0.5" style={{ background: 'var(--crimson)', fontSize: 9 }}>Primary</span>}
                       <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center gap-1">
-                        {!img.isPrimary && <button onClick={() => setImages(prev => prev.map((x, j) => ({ ...x, isPrimary: j === i })))} className="bg-white rounded px-1.5 py-0.5 text-xs opacity-0 hover:opacity-100" style={{ fontSize: 9 }}>Set Primary</button>}
-                        <button onClick={() => setImages(prev => prev.filter((_, j) => j !== i))} className="bg-white rounded p-0.5 opacity-0 hover:opacity-100"><X size={10} /></button>
+                        {!img.isPrimary && <button type="button" onClick={() => setImages(prev => prev.map((x, j) => ({ ...x, isPrimary: j === i })))} className="bg-white rounded px-1.5 py-0.5 text-xs opacity-0 hover:opacity-100" style={{ fontSize: 9 }}>Set Primary</button>}
+                        <button type="button" onClick={() => setImages(prev => prev.filter((_, j) => j !== i))} className="bg-white rounded p-0.5 opacity-0 hover:opacity-100"><X size={10} /></button>
                       </div>
                     </div>
                   ))}

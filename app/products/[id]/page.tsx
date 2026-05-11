@@ -192,10 +192,18 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <input className="input" value={form.name || ''} onChange={e => setForm((p: any) => ({ ...p, name: e.target.value }))} placeholder="Product name" />
             </F>
             <F label="Fabric">
-              <input className="input" value={form.fabric || ''} onChange={e => setForm((p: any) => ({ ...p, fabric: e.target.value }))} />
+              <select className="input" value={form.fabric || ''} onChange={e => setForm((p: any) => ({ ...p, fabric: e.target.value }))}>
+                <option value="">Select fabric...</option>
+                {['Silk','Cotton','Georgette','Chiffon','Linen','Organza','Net','Crepe','Tussar','Chanderi','Satin','Velvet','Khadi','Viscose'].map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
             </F>
             <F label="Weave Type">
-              <input className="input" value={form.weave_type || ''} onChange={e => setForm((p: any) => ({ ...p, weave_type: e.target.value }))} />
+              <input className="input" list="weave-list-edit" value={form.weave_type || ''}
+                onChange={e => setForm((p: any) => ({ ...p, weave_type: e.target.value }))}
+                placeholder="Type or select..." />
+              <datalist id="weave-list-edit">
+                {['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom'].map(w => <option key={w} value={w} />)}
+              </datalist>
             </F>
             <F label="Origin / Region">
               <input className="input" value={form.origin_region || ''} onChange={e => setForm((p: any) => ({ ...p, origin_region: e.target.value }))} />
