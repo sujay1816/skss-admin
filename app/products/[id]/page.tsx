@@ -39,17 +39,36 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       setVariants(v || [])
       setImages(imgs || [])
       setVideoUrl(p?.video_url || '')
-      const { data: fabricCfg } = await supabase.from('site_config').select('value').eq('key', 'fabric_types').single()
-      if (fabricCfg?.value) { try { setFabrics(JSON.parse(fabricCfg.value)) } catch {} }
-      const { data: weavesData } = await supabase.from('products').select('weave_type').not('weave_type', 'is', null)
-      if (weavesData) {
-        const base = ['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom']
-        const unique = [...new Set([...base, ...weavesData.map((r: any) => r.weave_type).filter(Boolean)])]
-        setWeaveTypes(unique as string[])
-      }
     }
     load()
   }, [params.id])
+
+  // Separate useEffect for fabrics — runs independently so product load errors don't block it
+  useEffect(() => {
+    const loadFabrics = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_config')
+          .select('value')
+          .eq('key', 'fabric_types')
+          .maybeSingle()
+        if (!error && data?.value) {
+          const parsed = JSON.parse(data.value)
+          if (Array.isArray(parsed) && parsed.length > 0) setFabrics(parsed)
+        }
+      } catch {}
+      // Load existing weave types for autocomplete
+      try {
+        const { data: weavesData } = await supabase.from('products').select('weave_type').not('weave_type', 'is', null)
+        if (weavesData) {
+          const base = ['Kanjivaram','Banarasi','Chanderi','Tant','Patola','Sambalpuri','Ikkat','Jamdani','Phulkari','Gadwal','Paithani','Maheshwari','Bhagalpuri','Pochampally','Kasavu','Narayanpet','Handloom','Powerloom']
+          const unique = [...new Set([...base, ...weavesData.map((r: any) => r.weave_type).filter(Boolean)])]
+          setWeaveTypes(unique as string[])
+        }
+      } catch {}
+    }
+    loadFabrics()
+  }, [])
 
   const uploadVideo = async (file: File) => {
     if (file.size > 50 * 1024 * 1024) { toast.error('Video must be under 50MB'); return }
