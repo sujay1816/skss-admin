@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { Plus, Trash2, Upload, Edit, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
-import Image from 'next/image'
 import toast from 'react-hot-toast'
 
 const OVERLAY_OPTIONS = [
@@ -49,14 +48,6 @@ const DEFAULT_FORM = {
   isActive: true,
   displayOrder: 0,
 }
-
-// Moved outside component to prevent focus loss on re-render
-const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div>
-    <label className="text-xs text-gray-600 mb-1 block font-medium">{label}</label>
-    {children}
-  </div>
-)
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<any[]>([])
@@ -174,6 +165,13 @@ export default function BannersPage() {
     updated[swapIdx] = { ...b2, display_order: a.display_order }
     setBanners(updated.sort((x, y) => x.display_order - y.display_order))
   }
+
+  const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="text-xs text-gray-600 mb-1 block font-medium">{label}</label>
+      {children}
+    </div>
+  )
 
   return (
     <AdminLayout>
