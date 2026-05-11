@@ -12,9 +12,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [form, setForm] = useState<any>(null)
   const [variants, setVariants] = useState<any[]>([])
   const [images, setImages] = useState<any[]>([])
+  const [videoUrl, setVideoUrl] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -24,9 +27,34 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       setForm(p)
       setVariants(v || [])
       setImages(imgs || [])
+      setVideoUrl(p?.video_url || '')
     }
     load()
   }, [params.id])
+
+  // Upload video to Cloudinary
+  const uploadVideo = async (file: File) => {
+    if (file.size > 50 * 1024 * 1024) { toast.error('Video must be under 50MB'); return }
+    setUploadingVideo(true)
+    try {
+      const { data: cfg } = await supabase.from('site_config').select('value').eq('key', 'cloudinary_cloud_name').single()
+      if (!cfg?.value) { toast.error('Set Cloudinary Cloud Name in Config first'); setUploadingVideo(false); return }
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('upload_preset', 'skss_products')
+      fd.append('folder', 'skss/videos')
+      fd.append('resource_type', 'video')
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cfg.value}/video/upload`, { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.secure_url) {
+        setVideoUrl(data.secure_url)
+        toast.success('Video uploaded!')
+      } else {
+        toast.error('Video upload failed')
+      }
+    } catch { toast.error('Upload error') }
+    setUploadingVideo(false)
+  }
 
   // Upload image to Cloudinary
   const uploadImage = async (file: File) => {
@@ -94,7 +122,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       original_price: form.original_price, sale_price: form.sale_price || null,
       gst_rate: form.gst_rate, is_active: form.is_active, is_featured: form.is_featured,
       is_bestseller: form.is_bestseller, blouse_included: form.blouse_included,
-      care_instructions: form.care_instructions, updated_at: new Date().toISOString()
+      care_instructions: form.care_instructions,
+      video_url: videoUrl || null,
+      updated_at: new Date().toISOString()
     }).eq('id', params.id)
 
     for (const v of variants) {
@@ -203,6 +233,41 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
           )}
           <p className="text-xs text-gray-400 mt-3">Hover over an image to set it as primary or delete it. Primary image is shown first in the storefront.</p>
+        </div>
+
+        {/* Video Upload — Optional */}
+        <div className="card p-5 mb-5">
+          <h2 className="font-semibold text-gray-900 mb-1">Product Video <span className="text-xs font-normal text-gray-400 ml-1">(Optional)</span></h2>
+          <p className="text-xs text-gray-400 mb-4">Short saree drape video (15-60 sec). MP4 format, max 50MB. Customers can play it on the product page.</p>
+          <input ref={videoRef} type="file" accept="video/mp4,video/*" className="hidden"
+            onChange={e => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
+          {videoUrl ? (
+            <div className="space-y-3">
+              <video src={videoUrl} controls className="w-full rounded-lg" style={{ maxHeight: 200 }} preload="metadata" />
+              <div className="flex gap-2">
+                <button onClick={() => videoRef.current?.click()} disabled={uploadingVideo}
+                  className="btn btn-secondary text-xs flex items-center gap-1">
+                  <Upload size={12} /> {uploadingVideo ? 'Uploading...' : 'Replace Video'}
+                </button>
+                <button onClick={() => setVideoUrl('')}
+                  className="btn text-xs flex items-center gap-1 text-red-500 hover:bg-red-50 border border-red-200">
+                  <X size={12} /> Remove Video
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => videoRef.current?.click()} disabled={uploadingVideo}
+              className="w-full h-24 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-red-300 transition-colors">
+              {uploadingVideo ? (
+                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <p className="text-xs text-gray-400">Click to upload product video (MP4)</p>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Variants */}

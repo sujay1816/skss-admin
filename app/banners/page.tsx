@@ -35,6 +35,7 @@ const FOCUS_POINTS = [
 const DEFAULT_FORM = {
   imageUrl: '',
   imageFocus: 'center',
+  videoUrl: '',
   heading: '',
   headingItalic: '',
   subheading: '',
@@ -90,6 +91,7 @@ export default function BannersPage() {
     const payload = {
       image_url: form.imageUrl,
       image_focus: form.imageFocus,
+      video_url: form.videoUrl || null,
       heading: form.heading,
       heading_italic: form.headingItalic,
       subheading: form.subheading || null,
@@ -122,6 +124,7 @@ export default function BannersPage() {
     setForm({
       imageUrl: b.image_url || '',
       imageFocus: b.image_focus || 'center',
+      videoUrl: b.video_url || '',
       heading: b.heading || '',
       headingItalic: b.heading_italic || '',
       subheading: b.subheading || '',
@@ -252,6 +255,19 @@ export default function BannersPage() {
             </div>
 
             {/* ── TEXT CONTENT ── */}
+            <div className="border-t border-gray-100 pt-5 mb-5">
+              <p className="text-sm font-semibold text-gray-700 mb-1">Background Video (Optional)</p>
+              <p className="text-xs text-gray-400 mb-3">If set, video plays instead of image. Upload MP4 to Cloudinary and paste the URL. Keep under 10MB for fast loading.</p>
+              <input
+                className="input"
+                value={form.videoUrl}
+                onChange={e => setForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
+                placeholder="https://res.cloudinary.com/.../video.mp4 (optional)"
+              />
+              {form.videoUrl && (
+                <p className="text-xs text-green-600 mt-1">✓ Video URL set — will play as background on homepage hero</p>
+              )}
+            </div>
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Text Content</p>
               <div className="grid grid-cols-2 gap-4">
