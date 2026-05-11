@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest) {
+  // Issue 8 fix — WhatsApp/SMS disabled until DLT registration is complete
+  // DLT is required by TRAI for commercial SMS in India
+  // Uncomment below after DLT sender ID and template are approved
+
+  /*
   const { orderId, phone, orderNumber, trackingId, courierName } = await req.json()
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
   const { data: cfg } = await supabase.from('site_config').select('key,value').in('key', ['fast2sms_key','brand_name'])
@@ -21,4 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
   return NextResponse.json({ success: false, error: data.message })
+  */
+
+  return NextResponse.json({ success: false, error: 'WhatsApp notifications disabled until DLT registration is complete' })
 }

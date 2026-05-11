@@ -18,7 +18,8 @@ export default function DashboardPage() {
         supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today),
         supabase.from('orders').select('total_amount').eq('payment_status', 'paid'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['placed', 'confirmed']),
+        // Issue 1 fix — removed 'placed', added 'processing'
+        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['confirmed', 'processing']),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'shipped'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'delivered'),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -32,7 +33,19 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  const STATUS_COLORS: Record<string, string> = { placed: '#6B7280', confirmed: '#059669', shipped: '#D97706', delivered: '#16A34A', cancelled: '#DC2626', return_requested: '#7C3AED' }
+  // Issue 1 fix — replaced 'placed' with 'processing', added all statuses
+  const STATUS_COLORS: Record<string, string> = {
+    confirmed:        '#059669',
+    processing:       '#2563EB',
+    shipped:          '#D97706',
+    delivered:        '#16A34A',
+    cancelled:        '#DC2626',
+    pending:          '#D97706',
+    return_requested: '#7C3AED',
+    return_approved:  '#1565C0',
+    return_rejected:  '#DC2626',
+    refunded:         '#059669',
+  }
 
   return (
     <AdminLayout>
@@ -62,7 +75,7 @@ export default function DashboardPage() {
         {/* Order pipeline */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: 'Pending', value: stats.pendingOrders, icon: Clock, color: '#F59E0B', href: '/orders?status=placed' },
+            { label: 'Pending', value: stats.pendingOrders, icon: Clock, color: '#F59E0B', href: '/orders?status=confirmed' },
             { label: 'Shipped', value: stats.shippedOrders, icon: Truck, color: '#3B82F6', href: '/orders?status=shipped' },
             { label: 'Delivered', value: stats.deliveredOrders, icon: Check, color: '#10B981', href: '/orders?status=delivered' },
           ].map((s, i) => (
@@ -85,7 +98,10 @@ export default function DashboardPage() {
               <tbody>
                 {recentOrders.map(o => (
                   <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3 font-mono font-semibold text-xs" style={{ color: 'var(--crimson)' }}>{o.order_number}</td>
+                    {/* Issue 10 fix — fallback to id if order_number is null */}
+                    <td className="px-5 py-3 font-mono font-semibold text-xs" style={{ color: 'var(--crimson)' }}>
+                      {o.order_number || `#${o.id.slice(0,8).toUpperCase()}`}
+                    </td>
                     <td className="px-5 py-3"><p className="font-medium text-gray-900">{o.profiles?.full_name || '—'}</p><p className="text-xs text-gray-400">{o.profiles?.email}</p></td>
                     <td className="px-5 py-3 font-semibold text-gray-900">₹{Number(o.total_amount).toLocaleString('en-IN')}</td>
                     <td className="px-5 py-3"><span className="badge text-white text-xs capitalize" style={{ background: STATUS_COLORS[o.status] || '#6B7280' }}>{o.status.replace('_',' ')}</span></td>
