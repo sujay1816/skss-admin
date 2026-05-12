@@ -86,7 +86,7 @@ export default function NewProductPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">New Product</h1>
           <div className="flex gap-3">
-            <button onClick={() => router.back()} className="btn btn-secondary">Cancel</button>
+            <button type="button" onClick={() => router.back()} className="btn btn-secondary">Cancel</button>
             <button type="button" onClick={handleSubmit} disabled={loading} className="btn btn-primary">{loading ? 'Saving...' : 'Save Product'}</button>
           </div>
         </div>

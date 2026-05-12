@@ -133,8 +133,8 @@ export default function OrdersPage() {
               <p className="text-center py-12 text-sm text-gray-400">{loading ? 'Loading...' : 'No orders found'}</p>
             )}
           </div>
-          </div>
         </div>
+      </div>
     </AdminLayout>
   )
 }

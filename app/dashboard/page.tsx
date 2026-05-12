@@ -16,7 +16,7 @@ export default function DashboardPage() {
       const [ordersRes, todayOrdersRes, revenueRes, customersRes, pendingRes, shippedRes, deliveredRes, productsRes, recentRes] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }),
         supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today),
-        supabase.from('orders').select('total_amount').eq('payment_status', 'paid'),
+        supabase.rpc('get_total_revenue').maybeSingle(),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
         // Issue 1 fix — removed 'placed', added 'processing'
         supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['confirmed', 'processing']),
@@ -25,7 +25,7 @@ export default function DashboardPage() {
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('orders').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(8),
       ])
-      const totalRevenue = (revenueRes.data || []).reduce((s: number, o: any) => s + Number(o.total_amount), 0)
+      const totalRevenue = Number(revenueRes.data?.sum || 0)
       setStats({ totalOrders: ordersRes.count || 0, todayOrders: todayOrdersRes.count || 0, totalRevenue, totalCustomers: customersRes.count || 0, pendingOrders: pendingRes.count || 0, shippedOrders: shippedRes.count || 0, deliveredOrders: deliveredRes.count || 0, totalProducts: productsRes.count || 0 })
       setRecentOrders(recentRes.data || [])
       setLoading(false)
@@ -92,7 +92,31 @@ export default function DashboardPage() {
             <h2 className="font-semibold text-gray-900">Recent Orders</h2>
             <Link href="/orders" className="text-xs font-medium" style={{ color: 'var(--crimson)' }}>View All</Link>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile recent orders */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {recentOrders.map(o => (
+              <div key={o.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-mono text-xs font-semibold" style={{ color: 'var(--crimson)' }}>
+                    {o.order_number || `#${o.id.slice(0,8).toUpperCase()}`}
+                  </p>
+                  <p className="font-medium text-gray-900 text-sm">{o.profiles?.full_name || '—'}</p>
+                  <p className="text-xs text-gray-400">₹{Number(o.total_amount).toLocaleString('en-IN')}</p>
+                </div>
+                <div className="text-right">
+                  <span className="badge text-white text-xs capitalize" style={{ background: STATUS_COLORS[o.status] || '#6B7280' }}>
+                    {o.status.replace('_',' ')}
+                  </span>
+                  <div className="mt-1">
+                    <a href={`/orders/${o.id}`} className="text-xs font-medium" style={{ color: 'var(--crimson)' }}>View →</a>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {recentOrders.length === 0 && <p className="text-center py-8 text-sm text-gray-400">No orders yet</p>}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-gray-100">{['Order #','Customer','Amount','Status','Date','Action'].map(h => <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500">{h}</th>)}</tr></thead>
               <tbody>
@@ -112,6 +136,7 @@ export default function DashboardPage() {
               </tbody>
             </table>
             {recentOrders.length === 0 && <p className="text-center py-8 text-sm text-gray-400">No orders yet</p>}
+          </div>
           </div>
         </div>
       </div>

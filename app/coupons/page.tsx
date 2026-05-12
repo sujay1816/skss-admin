@@ -2,22 +2,21 @@
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
-import { Plus, Trash2, Tag, Lock } from 'lucide-react'
+import { Plus, Trash2, Tag, Lock, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+const emptyForm = { code: '', type: 'percentage', value: '', minOrderValue: '', maxUsageCount: '100', perUserLimit: '1', expiryDate: '', isActive: true }
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([])
-  const [showNew, setShowNew] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
   const [canManage, setCanManage] = useState(false)
-  const [form, setForm] = useState({
-    code: '', type: 'percentage', value: '', minOrderValue: '',
-    maxUsageCount: '100', perUserLimit: '1', expiryDate: '', isActive: true
-  })
+  const [form, setForm] = useState({ ...emptyForm })
 
   useEffect(() => {
     supabase.from('coupons').select('*').order('created_at', { ascending: false })
       .then(({ data }) => setCoupons(data || []))
-    // Fix #5 — only manager/superadmin can manage coupons
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         supabase.from('profiles').select('role').eq('id', user.id).single()
@@ -26,21 +25,44 @@ export default function CouponsPage() {
     })
   }, [])
 
+  const startEdit = (c: any) => {
+    setEditId(c.id)
+    setForm({
+      code: c.code, type: c.type, value: String(c.value),
+      minOrderValue: String(c.min_order_value || ''),
+      maxUsageCount: String(c.max_usage_count),
+      perUserLimit: String(c.per_user_limit || 1),
+      expiryDate: c.expiry_date ? c.expiry_date.split('T')[0] : '',
+      isActive: c.is_active,
+    })
+    setShowForm(true)
+  }
+
+  const resetForm = () => { setShowForm(false); setEditId(null); setForm({ ...emptyForm }) }
+
   const save = async () => {
-    if (!canManage) { toast.error('Only managers can create coupons'); return }
+    if (!canManage) { toast.error('Only managers can manage coupons'); return }
     if (!form.code || !form.value) { toast.error('Code and value required'); return }
-    const { data, error } = await supabase.from('coupons').insert({
+    const payload = {
       code: form.code.toUpperCase(), type: form.type, value: Number(form.value),
       min_order_value: Number(form.minOrderValue) || 0,
       max_usage_count: Number(form.maxUsageCount) || 100,
       per_user_limit: Number(form.perUserLimit) || 1,
       expiry_date: form.expiryDate || null, is_active: form.isActive
-    }).select().single()
-    if (error) { toast.error(error.message); return }
-    setCoupons(prev => [data, ...prev])
-    setShowNew(false)
-    setForm({ code: '', type: 'percentage', value: '', minOrderValue: '', maxUsageCount: '100', perUserLimit: '1', expiryDate: '', isActive: true })
-    toast.success('Coupon created!')
+    }
+    if (editId) {
+      // Fix #11 — edit existing coupon
+      const { data, error } = await supabase.from('coupons').update(payload).eq('id', editId).select().single()
+      if (error) { toast.error(error.message); return }
+      setCoupons(prev => prev.map(c => c.id === editId ? data : c))
+      toast.success('Coupon updated!')
+    } else {
+      const { data, error } = await supabase.from('coupons').insert(payload).select().single()
+      if (error) { toast.error(error.message); return }
+      setCoupons(prev => [data, ...prev])
+      toast.success('Coupon created!')
+    }
+    resetForm()
   }
 
   const toggle = async (id: string, active: boolean) => {
@@ -66,27 +88,27 @@ export default function CouponsPage() {
             {!canManage && (
               <div className="flex items-center gap-1.5 mt-1">
                 <Lock size={12} className="text-amber-500" />
-                <p className="text-xs text-amber-600">View only — managers can create/delete coupons</p>
+                <p className="text-xs text-amber-600">View only — managers can create/edit coupons</p>
               </div>
             )}
           </div>
           {canManage && (
-            <button type="button" onClick={() => setShowNew(!showNew)} className="btn btn-primary">
+            <button type="button" onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary">
               <Plus size={16} /> New Coupon
             </button>
           )}
         </div>
 
-        {/* Fix #18 — mobile-friendly form */}
-        {showNew && canManage && (
-          <div className="card p-5 mb-5">
-            <h3 className="font-semibold mb-4">New Coupon</h3>
+        {showForm && canManage && (
+          <div className="card p-5 mb-5 border-2" style={{ borderColor: 'var(--crimson)' }}>
+            <h3 className="font-semibold mb-4">{editId ? 'Edit Coupon' : 'New Coupon'}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">Code (e.g. SILK20)</label>
+                <label className="text-xs text-gray-600 mb-1 block">Code</label>
                 <input className="input" value={form.code}
                   onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
-                  placeholder="SILK20" />
+                  placeholder="SILK20" disabled={!!editId} />
+                {editId && <p className="text-xs text-gray-400 mt-0.5">Code cannot be changed</p>}
               </div>
               <div>
                 <label className="text-xs text-gray-600 mb-1 block">Type</label>
@@ -127,13 +149,13 @@ export default function CouponsPage() {
                   <input type="checkbox" checked={form.isActive}
                     onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))}
                     style={{ accentColor: 'var(--crimson)' }} />
-                  Active immediately
+                  Active
                 </label>
               </div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button type="button" onClick={save} className="btn btn-primary">Create Coupon</button>
-              <button type="button" onClick={() => setShowNew(false)} className="btn btn-secondary">Cancel</button>
+              <button type="button" onClick={save} className="btn btn-primary">{editId ? 'Update Coupon' : 'Create Coupon'}</button>
+              <button type="button" onClick={resetForm} className="btn btn-secondary">Cancel</button>
             </div>
           </div>
         )}
@@ -160,6 +182,9 @@ export default function CouponsPage() {
               </div>
               {canManage && (
                 <div className="flex gap-2 flex-shrink-0">
+                  <button type="button" onClick={() => startEdit(c)} className="p-1.5 hover:bg-gray-100 rounded" title="Edit">
+                    <Edit size={14} style={{ color: 'var(--crimson)' }} />
+                  </button>
                   <button type="button" onClick={() => toggle(c.id, c.is_active)} className="btn btn-secondary text-xs">
                     {c.is_active ? 'Deactivate' : 'Activate'}
                   </button>

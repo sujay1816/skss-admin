@@ -190,7 +190,7 @@ export default function StockPage() {
             <p className="text-sm text-gray-500 mt-0.5">Update stock per colour variant</p>
           </div>
           {tab === 'editor' && totalChanges > 0 && (
-            <button onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2">
+            <button type="button" onClick={saveAll} disabled={saving} className="btn btn-primary flex items-center gap-2">
               <Save size={16} />{saving ? 'Saving...' : `Save ${totalChanges} Changes`}
             </button>
           )}
@@ -198,7 +198,7 @@ export default function StockPage() {
 
         <div className="flex gap-0 mb-6 border-b border-gray-200">
           {[['editor', '📋 Inline Editor'], ['csv', '📄 CSV Upload']].map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t as any)}
+            <button type="button" key={t} onClick={() => setTab(t as any)}
               className="px-5 py-3 text-sm font-medium border-b-2 transition-all"
               style={{ borderBottomColor: tab === t ? 'var(--crimson)' : 'transparent', color: tab === t ? 'var(--crimson)' : '#6B7280' }}>
               {label}
@@ -278,7 +278,7 @@ export default function StockPage() {
 
             {totalChanges > 0 && (
               <div className="sticky bottom-4 mt-4 flex justify-end">
-                <button onClick={saveAll} disabled={saving} className="btn btn-primary shadow-lg flex items-center gap-2">
+                <button type="button" onClick={saveAll} disabled={saving} className="btn btn-primary shadow-lg flex items-center gap-2">
                   <Save size={16} />{saving ? 'Saving...' : `Save ${totalChanges} Changes`}
                 </button>
               </div>
@@ -300,7 +300,7 @@ export default function StockPage() {
 
             <div className="card p-5">
               <h3 className="font-semibold text-gray-900 mb-2">Step 1 — Download Template</h3>
-              <button onClick={downloadTemplate} className="btn btn-secondary flex items-center gap-2">
+              <button type="button" onClick={downloadTemplate} className="btn btn-secondary flex items-center gap-2">
                 <Download size={16} /> Download CSV Template
               </button>
             </div>
@@ -351,8 +351,8 @@ export default function StockPage() {
                   </table>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setCsvPreview([])} className="btn btn-secondary flex-1">Clear</button>
-                  <button onClick={applyCSV} disabled={saving} className="btn btn-primary flex-1">
+                  <button type="button" onClick={() => setCsvPreview([])} className="btn btn-secondary flex-1">Clear</button>
+                  <button type="button" onClick={applyCSV} disabled={saving} className="btn btn-primary flex-1">
                     {saving ? 'Applying...' : 'Apply Updates'}
                   </button>
                 </div>

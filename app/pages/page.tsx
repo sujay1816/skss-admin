@@ -194,7 +194,7 @@ export default function PagesPage() {
         {/* Tabs */}
         <div className="flex flex-wrap gap-1 mb-6 border-b" style={{ borderColor: '#E5E7EB' }}>
           {PAGES.map(page => (
-            <button key={page.key} onClick={() => setActiveTab(page.key)}
+            <button type="button" key={page.key} onClick={() => setActiveTab(page.key)}
               className="px-4 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap"
               style={{ borderBottomColor: activeTab === page.key ? '#8B1A2B' : 'transparent', color: activeTab === page.key ? '#8B1A2B' : '#6B7280' }}>
               {page.label}
@@ -208,7 +208,7 @@ export default function PagesPage() {
           <div>
             {/* View on storefront link */}
             <div className="flex items-center justify-between mb-5">
-              <a href={`https://skss-storefront.vercel.app/${activePage.key}`} target="_blank" rel="noopener noreferrer"
+              <a href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://skss-storefront.vercel.app"}/${activePage.key}`} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-blue-500 underline">
                 View on storefront →
               </a>
@@ -227,7 +227,7 @@ export default function PagesPage() {
                   value={config[activePage.contentKey!] || '[]'}
                   onChange={val => setConfig(prev => ({ ...prev, [activePage.contentKey!]: val }))}
                 />
-                <button onClick={() => save(activePage.contentKey!, config[activePage.contentKey!] || '[]', 'FAQ Items')}
+                <button type="button" onClick={() => save(activePage.contentKey!, config[activePage.contentKey!] || '[]', 'FAQ Items')}
                   disabled={saving}
                   className="mt-5 flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white rounded-lg"
                   style={{ background: '#8B1A2B' }}>
@@ -257,7 +257,7 @@ export default function PagesPage() {
                   value={config[activePage.contentKey!] || ''}
                   onChange={val => setConfig(prev => ({ ...prev, [activePage.contentKey!]: val }))}
                 />
-                <button
+                <button type="button"
                   onClick={async () => {
                     if (activePage.titleKey) {
                       await save(activePage.titleKey, config[activePage.titleKey] || '', activePage.label + ' Title')
