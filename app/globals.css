@@ -1,16 +1,133 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root { --crimson: #8B1A2B; --gold: #C9A84C; --cream: #F5EDE3; }
-body { background: #F8F9FA; font-family: -apple-system, 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --crimson: #8B1A2B;
+  --gold: #C9A84C;
+  --cream: #F5EDE3;
+  --cream-dark: #EDD9C5;
+  --sidebar-width: 224px;
+}
+
+/* ── Base ── */
+body {
+  background: #F8F9FA;
+  font-family: -apple-system, 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
 * { box-sizing: border-box; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; border-radius: 4px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--crimson); color: white; }
-.btn-primary:hover { opacity: 0.9; }
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #E5E7EB; }
-.btn-secondary:hover { background: #F9FAFB; }
+.btn-secondary:hover:not(:disabled) { background: #F9FAFB; border-color: #D1D5DB; }
 .btn-danger { background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; }
-.input { width: 100%; padding: 8px 12px; border: 1px solid #E5E7EB; border-radius: 4px; font-size: 14px; outline: none; transition: border-color 0.2s; background: white; }
-.input:focus { border-color: var(--crimson); }
-.card { background: white; border-radius: 8px; border: 1px solid #E5E7EB; }
-.badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.btn-danger:hover:not(:disabled) { background: #FEE2E2; }
+.btn-gold { background: var(--gold); color: white; }
+.btn-gold:hover:not(:disabled) { opacity: 0.88; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Inputs ── */
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: white;
+  color: #111827;
+}
+.input:focus {
+  border-color: var(--crimson);
+  box-shadow: 0 0 0 3px rgba(139, 26, 43, 0.08);
+}
+.input::placeholder { color: #9CA3AF; }
+.input:disabled { background: #F9FAFB; color: #6B7280; cursor: not-allowed; }
+textarea.input { resize: vertical; min-height: 80px; }
+
+/* ── Cards ── */
+.card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Skeleton loading ── */
+.skeleton {
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Tables ── */
+table { border-collapse: collapse; width: 100%; }
+th { font-weight: 600; text-align: left; }
+tr:last-child td { border-bottom: none; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+/* ── Mobile utilities ── */
+@media (max-width: 768px) {
+  .card { border-radius: 8px; }
+  .btn { padding: 8px 12px; font-size: 12px; }
+  .input { font-size: 16px; } /* prevents iOS zoom on focus */
+  h1 { font-size: 1.4rem !important; }
+  /* Ensure content doesn't hide behind mobile hamburger */
+  .page-container { padding-top: 3.5rem; }
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.25s ease-out; }
+
+/* ── Focus visible (accessibility) ── */
+:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 2px;
+}
+
+/* ── Toast tweaks ── */
+.react-hot-toast { font-size: 13px !important; }
