@@ -25,7 +25,7 @@ export default function DashboardPage() {
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('orders').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(8),
       ])
-      const totalRevenue = Number(revenueRes.data?.sum || 0)
+      const totalRevenue = Number((revenueRes.data as any)?.sum || 0)
       setStats({ totalOrders: ordersRes.count || 0, todayOrders: todayOrdersRes.count || 0, totalRevenue, totalCustomers: customersRes.count || 0, pendingOrders: pendingRes.count || 0, shippedOrders: shippedRes.count || 0, deliveredOrders: deliveredRes.count || 0, totalProducts: productsRes.count || 0 })
       setRecentOrders(recentRes.data || [])
       setLoading(false)
