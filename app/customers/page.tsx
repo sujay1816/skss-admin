@@ -11,7 +11,6 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
   const [page, setPage] = useState(1)
 
   const load = async () => {
@@ -27,24 +26,6 @@ export default function CustomersPage() {
   }
 
   useEffect(() => { load() }, [])
-
-  // Fix — sync missing profiles from auth.users
-  // Some customers signed up before the auth callback fix was deployed
-  // This button creates profile rows for any auth users who are missing one
-  const syncMissingProfiles = async () => {
-    setSyncing(true)
-    try {
-      // Use service role via a supabase admin call to list auth users
-      // Since we only have anon key on client, we call a workaround:
-      // Check auth.users via the admin API through supabase functions
-      // For now — we use the profiles table approach with upsert
-      // The real fix is the updated auth/callback route on storefront
-      toast.success('Profile sync triggered. New signups will now appear automatically.')
-    } catch (e: any) {
-      toast.error('Sync failed: ' + e.message)
-    }
-    setSyncing(false)
-  }
 
   const toggleBlock = async (id: string, blocked: boolean) => {
     await supabase.from('profiles').update({ is_blocked: !blocked }).eq('id', id)

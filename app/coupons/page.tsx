@@ -20,7 +20,7 @@ export default function CouponsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         supabase.from('profiles').select('role').eq('id', user.id).single()
-          .then(({ data }) => setCanManage(['manager','superadmin'].includes(data?.role || '')))
+          .then(({ data }) => setCanManage(['admin','manager','superadmin'].includes(data?.role || '')))
       }
     })
   }, [])
@@ -41,7 +41,7 @@ export default function CouponsPage() {
   const resetForm = () => { setShowForm(false); setEditId(null); setForm({ ...emptyForm }) }
 
   const save = async () => {
-    if (!canManage) { toast.error('Only managers can manage coupons'); return }
+    if (!canManage) { toast.error('Only admins can manage coupons'); return }
     if (!form.code || !form.value) { toast.error('Code and value required'); return }
     const payload = {
       code: form.code.toUpperCase(), type: form.type, value: Number(form.value),
@@ -66,13 +66,13 @@ export default function CouponsPage() {
   }
 
   const toggle = async (id: string, active: boolean) => {
-    if (!canManage) { toast.error('Only managers can modify coupons'); return }
+    if (!canManage) { toast.error('Only admins can modify coupons'); return }
     await supabase.from('coupons').update({ is_active: !active }).eq('id', id)
     setCoupons(prev => prev.map(c => c.id === id ? { ...c, is_active: !active } : c))
   }
 
   const del = async (id: string) => {
-    if (!canManage) { toast.error('Only managers can delete coupons'); return }
+    if (!canManage) { toast.error('Only admins can delete coupons'); return }
     if (!confirm('Delete this coupon?')) return
     await supabase.from('coupons').delete().eq('id', id)
     setCoupons(prev => prev.filter(c => c.id !== id))
@@ -88,7 +88,7 @@ export default function CouponsPage() {
             {!canManage && (
               <div className="flex items-center gap-1.5 mt-1">
                 <Lock size={12} className="text-amber-500" />
-                <p className="text-xs text-amber-600">View only — managers can create/edit coupons</p>
+                <p className="text-xs text-amber-600">View only — admins can create/edit coupons</p>
               </div>
             )}
           </div>

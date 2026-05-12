@@ -28,7 +28,7 @@ export default function ProductsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        setCanDelete(['manager','superadmin'].includes(profile?.role || ''))
+        setCanDelete(['admin','manager','superadmin'].includes(profile?.role || ''))
       }
     }
     load()
@@ -42,7 +42,7 @@ export default function ProductsPage() {
 
   const deleteProduct = async (id: string) => {
     // Fix #4 — only managers/superadmins can delete
-    if (!canDelete) { toast.error('Only managers can delete products'); return }
+    if (!canDelete) { toast.error('Only admins can delete products'); return }
     if (!confirm('Delete this product? This cannot be undone.')) return
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))

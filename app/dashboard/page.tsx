@@ -4,8 +4,20 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { ShoppingBag, Users, Package, TrendingUp, Clock, Check, Truck } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 
 export default function DashboardPage() {
+  // Show access denied toast when redirected from a restricted page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('error') === 'access_denied') {
+        toast.error('You do not have permission to access that page.')
+        window.history.replaceState({}, '', '/dashboard')
+      }
+    }
+  }, [])
+
   const [stats, setStats] = useState({ totalOrders: 0, todayOrders: 0, totalRevenue: 0, totalCustomers: 0, pendingOrders: 0, shippedOrders: 0, deliveredOrders: 0, totalProducts: 0 })
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

@@ -34,8 +34,11 @@ export default function NotificationsPage() {
   }
 
   const clearAll = async () => {
+    // Fix #10 — add confirmation before wiping all notifications
+    if (!confirm('Clear all notifications? This cannot be undone.')) return
     await supabase.from('admin_notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     setNotifications([])
+    toast.success('All notifications cleared')
   }
 
   const unread = notifications.filter(n => !n.is_read).length
