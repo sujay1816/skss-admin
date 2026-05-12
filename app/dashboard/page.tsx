@@ -30,8 +30,8 @@ export default function DashboardPage() {
         supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today),
         supabase.rpc('get_total_revenue').maybeSingle(),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
-        // Issue 1 fix — removed 'placed', added 'processing'
-        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['confirmed', 'processing']),
+
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'confirmed'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'shipped'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'delivered'),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -45,10 +45,10 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  // Issue 1 fix — replaced 'placed' with 'processing', added all statuses
+
   const STATUS_COLORS: Record<string, string> = {
     confirmed:        '#059669',
-    processing:       '#2563EB',
+
     shipped:          '#D97706',
     delivered:        '#16A34A',
     cancelled:        '#DC2626',

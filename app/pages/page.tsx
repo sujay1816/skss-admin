@@ -28,7 +28,7 @@ const RICH_TOOLBAR = [
 
 function RichEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const exec = (cmd: string, val?: string) => {
-    document.execCommand(cmd, false, val)
+    try { document.execCommand(cmd, false, val) } catch (e) { console.warn("execCommand not supported:", cmd) }
   }
 
   return (

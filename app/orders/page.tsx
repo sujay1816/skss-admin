@@ -5,10 +5,9 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 
-// Issue 2 fix — replaced 'placed' with 'processing'
+// Status colors — matches orders_status_check DB constraint
 const STATUS_COLORS: Record<string, string> = {
   confirmed:        '#059669',
-  processing:       '#2563EB',
   shipped:          '#D97706',
   delivered:        '#16A34A',
   cancelled:        '#DC2626',
@@ -54,8 +53,8 @@ export default function OrdersPage() {
             </div>
             <select className="input" style={{ height: 36, width: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="">All Statuses</option>
-              {/* Issue 2 fix — removed 'placed', added 'processing' and all return statuses */}
-              {['confirmed','processing','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded'].map(s => (
+
+              {['confirmed','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded'].map(s => (
                 <option key={s} value={s} className="capitalize">{s.replace(/_/g,' ')}</option>
               ))}
             </select>
