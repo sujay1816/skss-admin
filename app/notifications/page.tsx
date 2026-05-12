@@ -4,6 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { Bell, Package, ShoppingBag, RotateCcw, Star, Users } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 
 const ICONS: Record<string, any> = { new_order: ShoppingBag, low_stock: Package, return_request: RotateCcw, new_review: Star, new_customer: Users }
 const COLORS: Record<string, string> = { new_order: '#8B1A2B', low_stock: '#D97706', return_request: '#7C3AED', new_review: '#C9A84C', new_customer: '#3B82F6' }
