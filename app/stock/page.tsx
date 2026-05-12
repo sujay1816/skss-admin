@@ -131,7 +131,7 @@ export default function StockPage() {
     setSaving(true)
     let updated = 0, notFound = 0
     // Fix #8 — run all updates in parallel instead of serial
-    const updatePromises: Promise<void>[] = []
+    const updatePromises: PromiseLike<void>[] = []
     for (const row of csvPreview) {
       const matchProduct = products.find(p =>
         p.name.toLowerCase().includes(row.name.toLowerCase()) ||
