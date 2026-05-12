@@ -56,10 +56,6 @@ export default function DashboardPage() {
     }
     load()
   }, [])
-
-
-
-
   return (
     <AdminLayout>
       <div>
