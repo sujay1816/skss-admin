@@ -48,17 +48,36 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
   const save = async () => {
     setSaving(true)
-    // Fix — removed updated_at field as it may not exist in all DB schemas
-    // status, tracking_id, courier_name are the reliable columns
-    const updatePayload: Record<string, any> = {
-      status,
-      tracking_id: trackingId || null,
-      courier_name: courierName || null,
-    }
-    const { error } = await supabase.from('orders').update(updatePayload).eq('id', params.id)
-    if (!error) {
+    try {
+      // Try updating only status first — most minimal update possible
+      const { error: statusError } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', params.id)
+
+      if (statusError) {
+        toast.error('Status update failed: ' + statusError.message)
+        console.error('Order update error:', statusError)
+        setSaving(false)
+        return
+      }
+
+      // Then update tracking if provided
+      if (trackingId || courierName) {
+        const { error: trackingError } = await supabase
+          .from('orders')
+          .update({
+            tracking_id: trackingId || null,
+            courier_name: courierName || null,
+          })
+          .eq('id', params.id)
+        if (trackingError) console.error('Tracking update error:', trackingError)
+      }
+
       toast.success('Order updated!')
-      // WhatsApp notification — only when DLT is set up
+      setOrder((prev: any) => ({ ...prev, status }))
+
+      // WhatsApp notification
       if (status === 'shipped' && trackingId && order.profiles?.whatsapp_opted_in && !waNotified) {
         try {
           await fetch('/api/whatsapp', {
@@ -66,10 +85,14 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId: params.id, phone: order.profiles.phone, orderNumber: order.order_number || order.id.slice(0,8).toUpperCase(), trackingId, courierName })
           })
-          setWaNotified(true); toast.success('WhatsApp notification sent!')
+          setWaNotified(true)
+          toast.success('WhatsApp notification sent!')
         } catch {}
       }
-    } else { toast.error('Update failed') }
+    } catch (e: any) {
+      toast.error('Error: ' + e.message)
+      console.error('Save error:', e)
+    }
     setSaving(false)
   }
 
