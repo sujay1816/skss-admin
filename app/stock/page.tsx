@@ -130,30 +130,35 @@ export default function StockPage() {
     if (csvPreview.length === 0) return
     setSaving(true)
     let updated = 0, notFound = 0
+    // Fix #8 — run all updates in parallel instead of serial
+    const updatePromises: Promise<void>[] = []
     for (const row of csvPreview) {
       const matchProduct = products.find(p =>
         p.name.toLowerCase().includes(row.name.toLowerCase()) ||
         row.name.toLowerCase().includes(p.name.toLowerCase()))
       if (matchProduct) {
         if (row.colour) {
-          // Update specific variant
           const matchVariant = matchProduct.variants.find(v =>
             v.colour.toLowerCase().includes(row.colour.toLowerCase()))
           if (matchVariant) {
-            await supabase.from('product_variants').update({ stock: row.stock }).eq('id', matchVariant.id)
-            updated++
+            updatePromises.push(
+              supabase.from('product_variants').update({ stock: row.stock }).eq('id', matchVariant.id).then(() => { updated++ })
+            )
           } else notFound++
         } else {
-          // No colour specified — distribute evenly across variants
           const perVariant = Math.floor(row.stock / Math.max(1, matchProduct.variants.length))
-          for (const v of matchProduct.variants) {
-            await supabase.from('product_variants').update({ stock: perVariant }).eq('id', v.id)
-          }
-          await supabase.from('products').update({ stock: row.stock }).eq('id', matchProduct.id)
-          updated++
+          matchProduct.variants.forEach(v => {
+            updatePromises.push(
+              supabase.from('product_variants').update({ stock: perVariant }).eq('id', v.id).then(() => {})
+            )
+          })
+          updatePromises.push(
+            supabase.from('products').update({ stock: row.stock }).eq('id', matchProduct.id).then(() => { updated++ })
+          )
         }
       } else notFound++
     }
+    await Promise.all(updatePromises)
     toast.success(`Updated ${updated} rows${notFound > 0 ? `. ${notFound} not found.` : ''}`)
     setCsvPreview([])
     loadProducts()

@@ -28,16 +28,17 @@ export default function NotificationsPage() {
     load()
   }, [])
 
-  // Fix #10 — mark individual notification as read on click
   const markRead = async (id: string) => {
-    await supabase.from('admin_notifications').update({ is_read: true }).eq('id', id)
+    const { error } = await supabase.from('admin_notifications').update({ is_read: true }).eq('id', id)
+    if (error) { console.error('Mark read error:', error.message); return }
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
   }
 
   const clearAll = async () => {
     // Fix #10 — add confirmation before wiping all notifications
     if (!confirm('Clear all notifications? This cannot be undone.')) return
-    await supabase.from('admin_notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    const { error } = await supabase.from('admin_notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    if (error) { toast.error('Failed to clear notifications'); return }
     setNotifications([])
     toast.success('All notifications cleared')
   }

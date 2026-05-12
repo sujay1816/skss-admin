@@ -87,11 +87,13 @@ export default function BannersPage() {
       overlay_style: form.overlayStyle, text_color: form.textColor, is_active: form.isActive,
     }
     if (editId) {
-      const { data } = await supabase.from('banners').update(payload).eq('id', editId).select().single()
+      const { data, error } = await supabase.from('banners').update(payload).eq('id', editId).select().single()
+      if (error) { toast.error('Failed to update banner: ' + error.message); return }
       setBanners(prev => prev.map(b => b.id === editId ? data : b))
       toast.success('Banner updated!')
     } else {
-      const { data } = await supabase.from('banners').insert({ ...payload, display_order: banners.length + 1 }).select().single()
+      const { data, error } = await supabase.from('banners').insert({ ...payload, display_order: banners.length + 1 }).select().single()
+      if (error) { toast.error('Failed to add banner: ' + error.message); return }
       setBanners(prev => [...prev, data])
       toast.success('Banner added!')
     }
@@ -129,8 +131,15 @@ export default function BannersPage() {
     const swapIdx = dir === 'up' ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= banners.length) return
     const a = banners[idx], b2 = banners[swapIdx]
-    await supabase.from('banners').update({ display_order: b2.display_order }).eq('id', a.id)
-    await supabase.from('banners').update({ display_order: a.display_order }).eq('id', b2.id)
+    // Fix — run both updates in parallel and check for errors
+    const [r1, r2] = await Promise.all([
+      supabase.from('banners').update({ display_order: b2.display_order }).eq('id', a.id),
+      supabase.from('banners').update({ display_order: a.display_order }).eq('id', b2.id),
+    ])
+    if (r1.error || r2.error) {
+      toast.error('Failed to reorder banners')
+      return
+    }
     const updated = [...banners]
     updated[idx] = { ...a, display_order: b2.display_order }
     updated[swapIdx] = { ...b2, display_order: a.display_order }

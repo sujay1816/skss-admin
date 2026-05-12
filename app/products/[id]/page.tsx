@@ -114,8 +114,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   const setPrimary = async (imgId: string) => {
-    await supabase.from('product_images').update({ is_primary: false }).eq('product_id', params.id)
-    await supabase.from('product_images').update({ is_primary: true }).eq('id', imgId)
+    // Fix — run both updates in parallel and check for errors
+    const [r1, r2] = await Promise.all([
+      supabase.from('product_images').update({ is_primary: false }).eq('product_id', params.id),
+      supabase.from('product_images').update({ is_primary: true }).eq('id', imgId),
+    ])
+    if (r1.error || r2.error) {
+      toast.error('Failed to update primary image')
+      return
+    }
     setImages(prev => prev.map(i => ({ ...i, is_primary: i.id === imgId })))
     toast.success('Primary image updated')
   }

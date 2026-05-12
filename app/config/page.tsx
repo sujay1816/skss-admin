@@ -146,11 +146,21 @@ export default function ConfigPage() {
 
   const save = async () => {
     setSaving(true)
-    const updates = Object.entries(config).map(([key, value]) =>
-      supabase.from('site_config').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-    )
-    await Promise.all(updates)
-    toast.success('Settings saved! Changes will appear on storefront within a minute.')
+    try {
+      const updates = Object.entries(config).map(([key, value]) =>
+        supabase.from('site_config').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      )
+      const results = await Promise.all(updates)
+      const failed = results.filter(r => r.error)
+      if (failed.length > 0) {
+        toast.error(`${failed.length} setting(s) failed to save. Please try again.`)
+        console.error('Config save errors:', failed.map(r => r.error))
+      } else {
+        toast.success('Settings saved! Changes will appear on storefront within a minute.')
+      }
+    } catch (e: any) {
+      toast.error('Save failed: ' + e.message)
+    }
     setSaving(false)
   }
 

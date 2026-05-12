@@ -17,7 +17,8 @@ export default function ReturnsPage() {
   }, [])
 
   const update = async (id: string, status: string) => {
-    await supabase.from('orders').update({ status }).eq('id', id)
+    const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+    if (error) { toast.error('Failed to update return status: ' + error.message); return }
     setReturns(prev => prev.filter(r => r.id !== id))
     toast.success(`Return ${status === 'return_approved' ? 'approved' : 'rejected'}`)
   }

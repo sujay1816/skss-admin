@@ -34,14 +34,16 @@ export default function ReviewsPage() {
   }
 
   const approve = async (id: string) => {
-    await supabase.from('reviews').update({ is_approved: true }).eq('id', id)
+    const { error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', id)
+    if (error) { toast.error('Failed to approve review'); return }
     setReviews(prev => prev.filter(r => r.id !== id))
     toast.success('Review approved — now visible on storefront')
   }
 
   const reject = async (id: string) => {
     if (!confirm('Delete this review permanently?')) return
-    await supabase.from('reviews').delete().eq('id', id)
+    const { error } = await supabase.from('reviews').delete().eq('id', id)
+    if (error) { toast.error('Failed to delete review'); return }
     setReviews(prev => prev.filter(r => r.id !== id))
     toast.success('Review deleted')
   }

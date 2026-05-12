@@ -71,7 +71,12 @@ export default function NewProductPage() {
       }).select().single()
       if (error) throw error
       if (images.length > 0) await supabase.from('product_images').insert(images.map((img, i) => ({ product_id: product.id, url: img.url, public_id: img.publicId, is_primary: img.isPrimary, order_index: i })))
-      if (variants.length > 0 && variants[0].colour) await supabase.from('product_variants').insert(variants.filter(v => v.colour).map(v => ({ product_id: product.id, colour: v.colour, colour_hex: v.colourHex, stock: Number(v.stock), sku: v.sku })))
+      // Fix — always create at least one variant so stock shows on storefront
+      // If no colour specified, default to 'Default'
+      const variantsToInsert = variants.filter(v => v.colour).length > 0
+        ? variants.filter(v => v.colour).map(v => ({ product_id: product.id, colour: v.colour, colour_hex: v.colourHex, stock: Number(v.stock), sku: v.sku || `${slug}-${v.colour.toLowerCase().replace(/\s+/g,'-')}` }))
+        : [{ product_id: product.id, colour: 'Default', colour_hex: '#8B1A2B', stock: variants[0] ? Number(variants[0].stock) : 0, sku: `${slug}-default` }]
+      await supabase.from('product_variants').insert(variantsToInsert)
       toast.success('Product created!')
       router.push('/products')
     } catch (e: any) { toast.error(e.message || 'Error creating product') }

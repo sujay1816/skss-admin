@@ -48,12 +48,14 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
   const save = async () => {
     setSaving(true)
-    const { error } = await supabase.from('orders').update({
+    // Fix — removed updated_at field as it may not exist in all DB schemas
+    // status, tracking_id, courier_name are the reliable columns
+    const updatePayload: Record<string, any> = {
       status,
       tracking_id: trackingId || null,
       courier_name: courierName || null,
-      updated_at: new Date().toISOString()
-    }).eq('id', params.id)
+    }
+    const { error } = await supabase.from('orders').update(updatePayload).eq('id', params.id)
     if (!error) {
       toast.success('Order updated!')
       // WhatsApp notification — only when DLT is set up
