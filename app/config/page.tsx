@@ -154,7 +154,6 @@ export default function ConfigPage() {
       const failed = results.filter(r => r.error)
       if (failed.length > 0) {
         toast.error(`${failed.length} setting(s) failed to save. Please try again.`)
-        console.error('Config save errors:', failed.map(r => r.error))
       } else {
         toast.success('Settings saved! Changes will appear on storefront within a minute.')
       }

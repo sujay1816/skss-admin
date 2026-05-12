@@ -30,7 +30,7 @@ export default function NotificationsPage() {
 
   const markRead = async (id: string) => {
     const { error } = await supabase.from('admin_notifications').update({ is_read: true }).eq('id', id)
-    if (error) { console.error('Mark read error:', error.message); return }
+    if (error) { toast.error('Failed to mark notification as read'); return }
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
   }
 

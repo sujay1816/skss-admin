@@ -57,7 +57,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
       if (statusError) {
         toast.error('Status update failed: ' + statusError.message)
-        console.error('Order update error:', statusError)
         setSaving(false)
         return
       }
@@ -71,7 +70,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             courier_name: courierName || null,
           })
           .eq('id', params.id)
-        if (trackingError) console.error('Tracking update error:', trackingError)
       }
 
       toast.success('Order updated!')
@@ -91,7 +89,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       }
     } catch (e: any) {
       toast.error('Error: ' + e.message)
-      console.error('Save error:', e)
     }
     setSaving(false)
   }
