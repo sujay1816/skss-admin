@@ -8,13 +8,13 @@ import toast from 'react-hot-toast'
 
 const formatPrice2 = (n: number) => '₹' + Number(n).toLocaleString('en-IN')
 
-// Issue 3 fix — removed 'placed', added 'processing'
-const STATUSES = ['confirmed','processing','shipped','delivered','cancelled','return_approved','return_rejected','refunded']
+// Status options — matches orders_status_check constraint
+const STATUSES = ['confirmed','shipped','delivered','cancelled','return_approved','return_rejected','refunded']
 
 // Issue 3 fix — updated STATUS_COLORS
 const STATUS_COLORS: Record<string, string> = {
   confirmed:        '#059669',
-  processing:       '#2563EB',
+
   shipped:          '#D97706',
   delivered:        '#16A34A',
   cancelled:        '#DC2626',
