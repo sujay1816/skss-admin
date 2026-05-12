@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { createClient } from '@supabase/supabase-js'
@@ -14,13 +14,19 @@ async function getBrandName(): Promise<string> {
   } catch { return 'SKSS' }
 }
 
+// Fix #8 — viewport exported separately as required by Next.js 14
+// Putting viewport inside generateMetadata causes a build warning
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const brandName = await getBrandName()
   return {
     title: `${brandName} — Admin Panel`,
     description: `Admin Panel for ${brandName}`,
-    // Fix #23 — viewport meta tag for correct mobile scaling
-    viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   }
 }
 
@@ -28,7 +34,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* Fix #23 — explicit viewport tag for mobile browsers */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
       <body>

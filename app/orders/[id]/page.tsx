@@ -9,9 +9,8 @@ import toast from 'react-hot-toast'
 const formatPrice2 = (n: number) => '₹' + Number(n).toLocaleString('en-IN')
 
 // Status options — matches orders_status_check constraint
-const STATUSES = ['confirmed','shipped','delivered','cancelled','return_approved','return_rejected','refunded']
+const STATUSES = ['confirmed','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded']
 
-// Issue 3 fix — updated STATUS_COLORS
 const STATUS_COLORS: Record<string, string> = {
   confirmed:        '#059669',
 
@@ -63,7 +62,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
       // Then update tracking if provided
       if (trackingId || courierName) {
-        const { error: trackingError } = await supabase
+        await supabase
           .from('orders')
           .update({
             tracking_id: trackingId || null,
@@ -159,7 +158,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                   <input className="input" value={trackingId} onChange={e => setTrackingId(e.target.value)} placeholder="AWB number" />
                 </div>
               </div>
-              {status === 'shipped' && trackingId && !waNotified && order.profiles?.whatsapp_opted_in && (
+              {status === 'shipped' && trackingId && !waNotified && order.profiles?.whatsapp_opted_in && process.env.NEXT_PUBLIC_WHATSAPP && (
                 <p className="text-xs mt-3 p-2 bg-green-50 border border-green-200 rounded text-green-700">
                   ✓ WhatsApp notification will be sent to {order.profiles?.phone} when you save.
                 </p>

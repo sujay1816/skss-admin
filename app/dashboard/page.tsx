@@ -6,6 +6,18 @@ import { ShoppingBag, Users, Package, TrendingUp, Clock, Check, Truck } from 'lu
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+const STATUS_COLORS: Record<string, string> = {
+  confirmed:        '#059669',
+  shipped:          '#D97706',
+  delivered:        '#16A34A',
+  cancelled:        '#DC2626',
+  pending:          '#D97706',
+  return_requested: '#7C3AED',
+  return_approved:  '#1565C0',
+  return_rejected:  '#DC2626',
+  refunded:         '#059669',
+}
+
 export default function DashboardPage() {
   // Show access denied toast when redirected from a restricted page
   useEffect(() => {
@@ -46,18 +58,7 @@ export default function DashboardPage() {
   }, [])
 
 
-  const STATUS_COLORS: Record<string, string> = {
-    confirmed:        '#059669',
 
-    shipped:          '#D97706',
-    delivered:        '#16A34A',
-    cancelled:        '#DC2626',
-    pending:          '#D97706',
-    return_requested: '#7C3AED',
-    return_approved:  '#1565C0',
-    return_rejected:  '#DC2626',
-    refunded:         '#059669',
-  }
 
   return (
     <AdminLayout>
@@ -148,7 +149,6 @@ export default function DashboardPage() {
               </tbody>
             </table>
             {recentOrders.length === 0 && <p className="text-center py-8 text-sm text-gray-400">No orders yet</p>}
-          </div>
           </div>
         </div>
     </AdminLayout>

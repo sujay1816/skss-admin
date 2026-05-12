@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Status colors — matches orders_status_check DB constraint
 const STATUS_COLORS: Record<string, string> = {
@@ -23,6 +23,8 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 30
 
   useEffect(() => {
     const load = async () => {
@@ -41,6 +43,9 @@ export default function OrdersPage() {
     (o.profiles?.email || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
   return (
     <AdminLayout>
       <div>
@@ -49,9 +54,9 @@ export default function OrdersPage() {
           <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className="input pl-9" style={{ height: 36, width: 240 }} placeholder="Search by order #, name, email..." value={search} onChange={e => setSearch(e.target.value)} />
+              <input className="input pl-9" style={{ height: 36, width: 240 }} placeholder="Search by order #, name, email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
             </div>
-            <select className="input" style={{ height: 36, width: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <select className="input" style={{ height: 36, width: 180 }} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
               <option value="">All Statuses</option>
 
               {['confirmed','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded'].map(s => (
@@ -61,7 +66,7 @@ export default function OrdersPage() {
           </div>
           {/* Fix #15 — Mobile card layout for orders */}
           <div className="md:hidden divide-y divide-gray-100">
-            {filtered.map(o => (
+            {paginated.map(o => (
               <div key={o.id} className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
@@ -98,7 +103,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(o => (
+                {paginated.map(o => (
                   <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                     <td className="px-5 py-3 font-mono text-xs font-semibold" style={{ color: 'var(--crimson)' }}>
                       {o.order_number || `#${o.id.slice(0,8).toUpperCase()}`}
@@ -133,6 +138,20 @@ export default function OrdersPage() {
             )}
           </div>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm text-gray-600">Page {page} of {totalPages} · {filtered.length} orders</span>
+            <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )

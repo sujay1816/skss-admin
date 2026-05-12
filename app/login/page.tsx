@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
       .maybeSingle()
 
     // Security fix — check role
-    if (!profile || !['staff', 'manager', 'superadmin'].includes(profile.role)) {
+    if (!profile || !['staff', 'admin', 'manager', 'superadmin'].includes(profile.role)) {
       await supabase.auth.signOut()
       toast.error('Access denied. Admin accounts only.')
       setLoading(false); return
