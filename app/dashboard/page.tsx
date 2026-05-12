@@ -145,8 +145,9 @@ export default function DashboardPage() {
               </tbody>
             </table>
             {recentOrders.length === 0 && <p className="text-center py-8 text-sm text-gray-400">No orders yet</p>}
-          </div>
+         </div>
         </div>
+      </div>
     </AdminLayout>
   )
 }
