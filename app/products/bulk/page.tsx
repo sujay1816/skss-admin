@@ -153,13 +153,17 @@ export default function BulkProductPage() {
             public_id: row.imageUrl, is_primary: true, order_index: 0
           })
         }
-        if (row.colour) {
-          await supabase.from('product_variants').insert({
-            product_id: product.id, colour: row.colour,
-            colour_hex: row.colourHex, stock: Number(row.stock),
-            sku: `${slug}-${row.colour.toLowerCase()}`, is_active: true,
-          })
-        }
+        // Fix — always create at least one variant so stock shows on storefront
+        // Storefront reads stock from product_variants, not products table
+        // If colour is blank, use 'Default' as colour name
+        const variantColour = row.colour.trim() || 'Default'
+        await supabase.from('product_variants').insert({
+          product_id: product.id,
+          colour: variantColour,
+          colour_hex: row.colourHex || '#8B1A2B',
+          stock: Number(row.stock),
+          sku: `${slug}-${variantColour.toLowerCase().replace(/\s+/g, '-')}`,
+        })
         saved++
       } catch (e: any) { toast.error(`Failed: "${row.name}" — ${e.message}`) }
     }
