@@ -204,7 +204,7 @@ export default function PermissionsPage() {
           ))}
         </div>
 
-        {activeRole !== 'superadmin' && (
+        
           <>
             <div className="mb-4 p-3 rounded-lg text-xs" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' }}>
               Editing permissions for: <strong>{activeRole === 'staff' ? 'Staff' : 'Admin'}</strong> role.
@@ -257,8 +257,7 @@ export default function PermissionsPage() {
                 <Save size={14} /> {saving ? 'Saving...' : 'Save Permissions'}
               </button>
             </div>
-          </>
-        )}
+          </>  
       </div>
     </AdminLayout>
   )
