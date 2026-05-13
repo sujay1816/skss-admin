@@ -11,6 +11,7 @@ const BODY_FONTS = ['DM Sans','Inter','Poppins','Nunito','Lato','Open Sans','Ral
 const CONFIG_GROUPS = [
   { title: 'Brand Identity', keys: [
     { key: 'brand_name', label: 'Brand Name' },
+    { key: 'brand_short_name', label: 'Brand Short Name (used as order number prefix, e.g. SKSS, RK, SAI)' },
     { key: 'brand_subtitle', label: 'Brand Subtitle (shown under logo e.g. SILKS & SAREES)' },
     { key: 'brand_tagline', label: 'Tagline' },
     { key: 'gstin', label: 'GSTIN' },
