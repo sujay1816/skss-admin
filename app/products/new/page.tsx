@@ -1,4 +1,10 @@
 'use client'
+// QA FIXES applied to this file:
+//   PROD-005 — negative original price prevented
+//   PROD-006 — sale price > original price prevented
+//   PROD-008 — negative stock prevented per variant
+//   PROD-027 — invalid image format rejected client-side
+//   PROD-028 — oversized image rejected client-side (>5MB)
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
@@ -7,9 +13,17 @@ import { Plus, Trash2, Upload, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const OCCASIONS = ['Wedding','Festive','Casual','Office','Party','Religious','Daily Wear']
+// QA FIX — PROD-027: Only allow these MIME types for product images
+const ALLOWED_IMAGE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp']
+// QA FIX — PROD-028: Maximum image size 5MB
+const MAX_IMAGE_SIZE_MB = 5
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
+
+// Moved outside component body — prevents re-mounting on every render
 const F = ({ label, children, col2 }: { label: string; children: React.ReactNode; col2?: boolean }) => (
-    <div className={col2 ? 'col-span-2' : ''}><label className="text-xs text-gray-600 font-medium mb-1 block">{label}</label>{children}</div>
-  )
+  <div className={col2 ? 'col-span-2' : ''}><label className="text-xs text-gray-600 font-medium mb-1 block">{label}</label>{children}</div>
+)
+
 export default function NewProductPage() {
   const router = useRouter()
   const [categories, setCategories] = useState<any[]>([])
@@ -24,13 +38,11 @@ export default function NewProductPage() {
 
   useEffect(() => {
     supabase.from('categories').select('id,name').eq('is_active', true).then(({ data }) => setCategories(data || []))
-    // Load fabrics from site_config so admin-managed list is always up to date
     supabase.from('site_config').select('value').eq('key', 'fabric_types').single().then(({ data }) => {
       if (data?.value) {
         try { setFabrics(JSON.parse(data.value)) } catch {}
       }
     })
-    // Load existing weave types from products for autocomplete
     supabase.from('products').select('weave_type').not('weave_type', 'is', null).then(({ data }) => {
       if (data) {
         const unique = [...new Set([...weaveTypes, ...data.map((r: any) => r.weave_type).filter(Boolean)])]
@@ -42,12 +54,22 @@ export default function NewProductPage() {
   const genSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substr(2, 4)
 
   const uploadImage = async (file: File) => {
+    // QA FIX — PROD-027: Validate image type before upload
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error(`Unsupported format. Use JPEG, PNG, or WebP. Got: ${file.type || 'unknown'}`)
+      return
+    }
+    // QA FIX — PROD-028: Validate image size before upload
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      toast.error(`File too large. Maximum size is ${MAX_IMAGE_SIZE_MB}MB. File is ${(file.size / 1024 / 1024).toFixed(1)}MB`)
+      return
+    }
+
     setUploading(true)
     const { data: cfg } = await supabase.from('site_config').select('key,value').in('key', ['cloudinary_cloud_name', 'cloudinary_api_key'])
     const config: Record<string, string> = {}
     cfg?.forEach((c: any) => { config[c.key] = c.value })
     if (!config.cloudinary_cloud_name) {
-      // Store as object URL for now
       const url = URL.createObjectURL(file)
       setImages(prev => [...prev, { file, url, publicId: '', isPrimary: prev.length === 0 }])
       setUploading(false); return
@@ -62,17 +84,41 @@ export default function NewProductPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.originalPrice || !form.categoryId) { toast.error('Please fill Name, Category and Price'); return }
+    // QA FIX — PROD-002/003/004: Required field validation
+    if (!form.name.trim()) { toast.error('Product name is required'); return }
+    if (!form.categoryId) { toast.error('Please select a category'); return }
+    if (!form.originalPrice) { toast.error('Original price is required'); return }
+
+    const origPrice = Number(form.originalPrice)
+    const salePrice = form.salePrice ? Number(form.salePrice) : null
+
+    // QA FIX — PROD-005: Prevent negative original price
+    if (origPrice <= 0) {
+      toast.error('Original price must be greater than ₹0')
+      return
+    }
+
+    // QA FIX — PROD-006: Sale price cannot exceed original price
+    if (salePrice !== null && salePrice >= origPrice) {
+      toast.error('Sale price must be less than original price (₹' + origPrice.toLocaleString('en-IN') + ')')
+      return
+    }
+
+    // QA FIX — PROD-008: Prevent negative stock values
+    const hasNegativeStock = variants.some(v => Number(v.stock) < 0)
+    if (hasNegativeStock) {
+      toast.error('Stock cannot be negative. Please enter 0 or greater for all variants.')
+      return
+    }
+
     setLoading(true)
     const slug = form.slug || genSlug(form.name)
     try {
       const { data: product, error } = await supabase.from('products').insert({
-        name: form.name, slug, description: form.description, fabric: form.fabric, weave_type: form.weaveType, origin_region: form.originRegion, occasion: selectedOccasions, care_instructions: form.careInstructions, blouse_included: form.blouseIncluded, length: Number(form.length) || 5.5, weight_grams: Number(form.weightGrams) || 0, category_id: form.categoryId, original_price: Number(form.originalPrice), sale_price: form.salePrice ? Number(form.salePrice) : null, discount_percent: form.discountPercent ? Number(form.discountPercent) : null, gst_rate: Number(form.gstRate), is_featured: form.isFeatured, is_bestseller: form.isBestseller, is_active: form.isActive
+        name: form.name, slug, description: form.description, fabric: form.fabric, weave_type: form.weaveType, origin_region: form.originRegion, occasion: selectedOccasions, care_instructions: form.careInstructions, blouse_included: form.blouseIncluded, length: Number(form.length) || 5.5, weight_grams: Number(form.weightGrams) || 0, category_id: form.categoryId, original_price: origPrice, sale_price: salePrice, discount_percent: form.discountPercent ? Number(form.discountPercent) : null, gst_rate: Number(form.gstRate), is_featured: form.isFeatured, is_bestseller: form.isBestseller, is_active: form.isActive
       }).select().single()
       if (error) throw error
       if (images.length > 0) await supabase.from('product_images').insert(images.map((img, i) => ({ product_id: product.id, url: img.url, public_id: img.publicId, is_primary: img.isPrimary, order_index: i })))
-      // Fix — always create at least one variant so stock shows on storefront
-      // If no colour specified, default to 'Default'
       const variantsToInsert = variants.filter(v => v.colour).length > 0
         ? variants.filter(v => v.colour).map(v => ({ product_id: product.id, colour: v.colour, colour_hex: v.colourHex, stock: Number(v.stock), sku: v.sku || `${slug}-${v.colour.toLowerCase().replace(/\s+/g,'-')}` }))
         : [{ product_id: product.id, colour: 'Default', colour_hex: '#8B1A2B', stock: variants[0] ? Number(variants[0].stock) : 0, sku: `${slug}-default` }]
@@ -82,8 +128,6 @@ export default function NewProductPage() {
     } catch (e: any) { toast.error(e.message || 'Error creating product') }
     setLoading(false)
   }
-
-
 
   return (
     <AdminLayout>
@@ -97,7 +141,6 @@ export default function NewProductPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main info */}
           <div className="lg:col-span-2 space-y-6">
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
@@ -139,17 +182,31 @@ export default function NewProductPage() {
               </div>
             </div>
 
-            {/* Pricing */}
+            {/* Pricing — with QA validation hints */}
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Pricing</h2>
               <div className="grid grid-cols-3 gap-4">
-                <F label="Original Price (₹) *"><input className="input" type="number" value={form.originalPrice} onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} /></F>
-                <F label="Sale Price (₹)"><input className="input" type="number" value={form.salePrice} onChange={e => setForm(p => ({ ...p, salePrice: e.target.value }))} /></F>
-                <F label="GST Rate (%)"><select className="input" value={form.gstRate} onChange={e => setForm(p => ({ ...p, gstRate: e.target.value }))}><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option></select></F>
+                <F label="Original Price (₹) *">
+                  <input className="input" type="number" min="1" value={form.originalPrice}
+                    onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} />
+                </F>
+                <F label="Sale Price (₹)">
+                  <input className="input" type="number" min="1" value={form.salePrice}
+                    onChange={e => setForm(p => ({ ...p, salePrice: e.target.value }))} />
+                  {/* QA FIX — PROD-006: inline hint */}
+                  {form.salePrice && form.originalPrice && Number(form.salePrice) >= Number(form.originalPrice) && (
+                    <p className="text-xs text-red-500 mt-0.5">Must be less than ₹{form.originalPrice}</p>
+                  )}
+                </F>
+                <F label="GST Rate (%)">
+                  <select className="input" value={form.gstRate} onChange={e => setForm(p => ({ ...p, gstRate: e.target.value }))}>
+                    <option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                  </select>
+                </F>
               </div>
             </div>
 
-            {/* Colour variants */}
+            {/* Colour variants — with negative stock guard */}
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-gray-900">Colour Variants & Stock</h2>
@@ -160,7 +217,12 @@ export default function NewProductPage() {
                   <div key={i} className="flex gap-3 items-end">
                     <div className="flex-1"><label className="text-xs text-gray-500 mb-1 block">Colour Name</label><input className="input" placeholder="e.g. Royal Red" value={v.colour} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colour: e.target.value } : x))} /></div>
                     <div><label className="text-xs text-gray-500 mb-1 block">Swatch</label><input type="color" value={v.colourHex} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colourHex: e.target.value } : x))} className="w-10 h-10 border rounded cursor-pointer" style={{ borderColor: '#E5E7EB', padding: 2 }} /></div>
-                    <div className="w-24"><label className="text-xs text-gray-500 mb-1 block">Stock</label><input type="number" className="input" value={v.stock} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Number(e.target.value) } : x))} /></div>
+                    {/* QA FIX — PROD-008: min=0 prevents negative stock */}
+                    <div className="w-24">
+                      <label className="text-xs text-gray-500 mb-1 block">Stock</label>
+                      <input type="number" min="0" className="input" value={v.stock}
+                        onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Math.max(0, Number(e.target.value)) } : x))} />
+                    </div>
                     <div className="flex-1"><label className="text-xs text-gray-500 mb-1 block">SKU</label><input className="input" placeholder="Optional" value={v.sku} onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} /></div>
                     {variants.length > 1 && <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))} className="mb-0.5 p-2 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>}
                   </div>
@@ -169,7 +231,6 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
             <div className="card p-4">
               <h2 className="font-semibold text-gray-900 mb-4">Category</h2>
@@ -179,13 +240,16 @@ export default function NewProductPage() {
               </select>
             </div>
 
-            {/* Images */}
             <div className="card p-4">
               <h2 className="font-semibold text-gray-900 mb-4">Product Images</h2>
+              {/* QA FIX — PROD-027/028: accept only allowed types; shows size limit */}
+              <p className="text-xs text-gray-400 mb-2">JPEG, PNG, WebP · Max {MAX_IMAGE_SIZE_MB}MB per image</p>
               <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-red-300 transition-colors" style={{ borderColor: '#E5E7EB' }}>
                 <Upload size={20} className="text-gray-400 mb-2" />
                 <p className="text-xs text-gray-500 text-center">Click to upload images{uploading ? ' (Uploading...)' : ''}</p>
-                <input type="file" className="hidden" multiple accept="image/*" onChange={e => { if (e.target.files) Array.from(e.target.files).forEach(uploadImage) }} />
+                <input type="file" className="hidden" multiple
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  onChange={e => { if (e.target.files) Array.from(e.target.files).forEach(uploadImage) }} />
               </label>
               {images.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-3">

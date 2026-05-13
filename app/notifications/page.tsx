@@ -1,5 +1,7 @@
 'use client'
+// QA FIX — NTFY: window.confirm() replaced with ConfirmModal
 import { useEffect, useState } from 'react'
+import { useConfirm } from '@/components/ui/ConfirmModal'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { Bell, Package, ShoppingBag, RotateCcw, Star, Users } from 'lucide-react'
@@ -12,6 +14,7 @@ const COLORS: Record<string, string> = { new_order: '#8B1A2B', low_stock: '#D977
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { confirm, ConfirmModal } = useConfirm()
 
   useEffect(() => {
     const load = async () => {
@@ -36,7 +39,8 @@ export default function NotificationsPage() {
 
   const clearAll = async () => {
     // Fix #10 — add confirmation before wiping all notifications
-    if (!confirm('Clear all notifications? This cannot be undone.')) return
+    const ok = await confirm({ title: 'Clear all notifications?', message: 'This cannot be undone. All notifications will be permanently removed.', confirmLabel: 'Clear All', danger: true })
+    if (!ok) return
     const { error } = await supabase.from('admin_notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     if (error) { toast.error('Failed to clear notifications'); return }
     setNotifications([])
@@ -111,6 +115,7 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
+      {ConfirmModal}
     </AdminLayout>
   )
 }

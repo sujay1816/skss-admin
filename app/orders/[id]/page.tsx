@@ -1,4 +1,7 @@
 'use client'
+// QA FIXES applied to this file:
+//   ORD-008 — invalid status transitions blocked (e.g. cancelled → confirmed)
+//   ORD-020 — duplicate refund prevention (already refunded orders cannot be refunded again)
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
@@ -8,12 +11,10 @@ import toast from 'react-hot-toast'
 
 const formatPrice2 = (n: number) => '₹' + Number(n).toLocaleString('en-IN')
 
-// Status options — matches orders_status_check constraint
 const STATUSES = ['confirmed','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded']
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed:        '#059669',
-
   shipped:          '#D97706',
   delivered:        '#16A34A',
   cancelled:        '#DC2626',
@@ -22,6 +23,26 @@ const STATUS_COLORS: Record<string, string> = {
   return_approved:  '#1565C0',
   return_rejected:  '#DC2626',
   refunded:         '#059669',
+}
+
+// QA FIX — ORD-008: Define which status transitions are valid.
+// Key = current status, Value = statuses it can transition TO.
+// Prevents admins from reopening cancelled orders or moving backwards.
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending:          ['confirmed', 'cancelled'],
+  confirmed:        ['shipped', 'cancelled'],
+  shipped:          ['delivered', 'return_requested'],
+  delivered:        ['return_requested'],
+  return_requested: ['return_approved', 'return_rejected'],
+  return_approved:  ['refunded'],
+  return_rejected:  [],   // terminal — no forward transitions
+  cancelled:        [],   // terminal — cannot reopen
+  refunded:         [],   // terminal — QA ORD-020
+}
+
+function getAllowedStatuses(currentStatus: string): string[] {
+  // Always include current status so the select isn't forced to change
+  return [currentStatus, ...(VALID_TRANSITIONS[currentStatus] || [])]
 }
 
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
@@ -46,9 +67,29 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   }, [params.id])
 
   const save = async () => {
+    if (!order) return
+
+    // QA FIX — ORD-008: Validate status transition before saving
+    const allowed = getAllowedStatuses(order.status)
+    if (!allowed.includes(status)) {
+      toast.error(`Cannot change status from "${order.status}" to "${status}". Invalid transition.`)
+      return
+    }
+
+    // QA FIX — ORD-020: Duplicate refund prevention
+    // If the order is already refunded, block any further status changes
+    if (order.status === 'refunded' && status !== 'refunded') {
+      toast.error('This order has already been refunded and cannot be modified.')
+      return
+    }
+    // If trying to set refunded when not approved — must come via return_approved
+    if (status === 'refunded' && order.status !== 'return_approved') {
+      toast.error('Refund can only be processed after return is approved.')
+      return
+    }
+
     setSaving(true)
     try {
-      // Try updating only status first — most minimal update possible
       const { error: statusError } = await supabase
         .from('orders')
         .update({ status })
@@ -60,7 +101,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         return
       }
 
-      // Then update tracking if provided
       if (trackingId || courierName) {
         await supabase
           .from('orders')
@@ -74,7 +114,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       toast.success('Order updated!')
       setOrder((prev: any) => ({ ...prev, status }))
 
-      // WhatsApp notification
       if (status === 'shipped' && trackingId && order.profiles?.whatsapp_opted_in && !waNotified) {
         try {
           await fetch('/api/whatsapp', {
@@ -94,8 +133,9 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
   if (!order) return <AdminLayout><div className="text-center py-20 text-sm text-gray-400">Loading...</div></AdminLayout>
 
-  // Issue 4 fix — address snapshot uses snake_case keys matching what checkout saves
   const addr = order.address_snapshot || order.shipping_address || {}
+  const allowedStatuses = getAllowedStatuses(order.status)
+  const isTerminal = VALID_TRANSITIONS[order.status]?.length === 0
 
   return (
     <AdminLayout>
@@ -140,33 +180,51 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             {/* Update status */}
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Update Order</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-600 mb-1 block">Order Status</label>
-                  <select className="input" value={status} onChange={e => setStatus(e.target.value)}>
-                    {STATUSES.map(s => (
-                      <option key={s} value={s} className="capitalize">{s.replace(/_/g,' ')}</option>
-                    ))}
-                  </select>
+
+              {/* QA FIX — ORD-008: Show terminal state notice */}
+              {isTerminal ? (
+                <div className="p-3 rounded text-sm mb-4" style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+                  <p className="text-gray-500">
+                    This order is in a terminal state (<strong>{order.status.replace(/_/g,' ')}</strong>) and cannot be updated further.
+                  </p>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 block">Courier Name</label>
-                  <input className="input" value={courierName} onChange={e => setCourierName(e.target.value)} placeholder="Delhivery, BlueDart..." />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 block">Tracking ID</label>
-                  <input className="input" value={trackingId} onChange={e => setTrackingId(e.target.value)} placeholder="AWB number" />
-                </div>
-              </div>
-              {status === 'shipped' && trackingId && !waNotified && order.profiles?.whatsapp_opted_in && process.env.NEXT_PUBLIC_WHATSAPP && (
-                <p className="text-xs mt-3 p-2 bg-green-50 border border-green-200 rounded text-green-700">
-                  ✓ WhatsApp notification will be sent to {order.profiles?.phone} when you save.
-                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="text-xs text-gray-600 mb-1 block">Order Status</label>
+                      {/* QA FIX — ORD-008: Only show valid next statuses */}
+                      <select className="input" value={status} onChange={e => setStatus(e.target.value)}>
+                        {allowedStatuses.map(s => (
+                          <option key={s} value={s} className="capitalize">{s.replace(/_/g,' ')}</option>
+                        ))}
+                      </select>
+                      {status !== order.status && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠ Changing from <strong>{order.status.replace(/_/g,' ')}</strong> to <strong>{status.replace(/_/g,' ')}</strong>
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 block">Courier Name</label>
+                      <input className="input" value={courierName} onChange={e => setCourierName(e.target.value)} placeholder="Delhivery, BlueDart..." />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 block">Tracking ID</label>
+                      <input className="input" value={trackingId} onChange={e => setTrackingId(e.target.value)} placeholder="AWB number" />
+                    </div>
+                  </div>
+                  {status === 'shipped' && trackingId && !waNotified && order.profiles?.whatsapp_opted_in && process.env.NEXT_PUBLIC_WHATSAPP && (
+                    <p className="text-xs mt-3 p-2 bg-green-50 border border-green-200 rounded text-green-700">
+                      ✓ WhatsApp notification will be sent to {order.profiles?.phone} when you save.
+                    </p>
+                  )}
+                  {waNotified && <p className="text-xs mt-3 text-green-600">✓ WhatsApp notification already sent</p>}
+                  <button type="button" onClick={save} disabled={saving} className="btn btn-primary mt-4">
+                    {saving ? 'Saving...' : 'Update Order'}
+                  </button>
+                </>
               )}
-              {waNotified && <p className="text-xs mt-3 text-green-600">✓ WhatsApp notification already sent</p>}
-              <button type="button" onClick={save} disabled={saving} className="btn btn-primary mt-4">
-                {saving ? 'Saving...' : 'Update Order'}
-              </button>
             </div>
           </div>
 
@@ -182,7 +240,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
               )}
             </div>
 
-            {/* Issue 4 fix — using snake_case keys that match checkout snapshot */}
             <div className="card p-4">
               <h2 className="font-semibold text-gray-900 mb-3">Delivery Address</h2>
               <p className="text-sm font-medium">{addr.full_name}</p>

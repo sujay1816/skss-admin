@@ -1,9 +1,14 @@
 'use client'
+// QA FIXES applied to this file:
+//   CPN-028  — percentage value > 100 prevented (added validation in save())
+//   CPN-007  — window.confirm() replaced with ConfirmModal
+//   PROD-006 — flat discount value > 0 enforced
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { Plus, Trash2, Tag, Lock, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '@/components/ui/ConfirmModal'
 
 const emptyForm = { code: '', type: 'percentage', value: '', minOrderValue: '', maxUsageCount: '100', perUserLimit: '1', expiryDate: '', isActive: true }
 
@@ -13,6 +18,8 @@ export default function CouponsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [canManage, setCanManage] = useState(false)
   const [form, setForm] = useState({ ...emptyForm })
+  // QA FIX — replace window.confirm()
+  const { confirm, ConfirmModal } = useConfirm()
 
   useEffect(() => {
     supabase.from('coupons').select('*').order('created_at', { ascending: false })
@@ -43,15 +50,29 @@ export default function CouponsPage() {
   const save = async () => {
     if (!canManage) { toast.error('Only admins can manage coupons'); return }
     if (!form.code || !form.value) { toast.error('Code and value required'); return }
+
+    const numValue = Number(form.value)
+
+    // QA FIX — CPN-028: percentage cannot exceed 100
+    if (form.type === 'percentage' && numValue > 100) {
+      toast.error('Percentage discount cannot exceed 100%')
+      return
+    }
+
+    // QA FIX: discount value must be positive
+    if (numValue <= 0) {
+      toast.error('Discount value must be greater than 0')
+      return
+    }
+
     const payload = {
-      code: form.code.toUpperCase(), type: form.type, value: Number(form.value),
+      code: form.code.toUpperCase(), type: form.type, value: numValue,
       min_order_value: Number(form.minOrderValue) || 0,
       max_usage_count: Number(form.maxUsageCount) || 100,
       per_user_limit: Number(form.perUserLimit) || 1,
       expiry_date: form.expiryDate || null, is_active: form.isActive
     }
     if (editId) {
-      // Fix #11 — edit existing coupon
       const { data, error } = await supabase.from('coupons').update(payload).eq('id', editId).select().single()
       if (error) { toast.error(error.message); return }
       setCoupons(prev => prev.map(c => c.id === editId ? data : c))
@@ -71,9 +92,16 @@ export default function CouponsPage() {
     setCoupons(prev => prev.map(c => c.id === id ? { ...c, is_active: !active } : c))
   }
 
-  const del = async (id: string) => {
+  const del = async (id: string, code: string) => {
     if (!canManage) { toast.error('Only admins can delete coupons'); return }
-    if (!confirm('Delete this coupon?')) return
+    // QA FIX — CPN (window.confirm replaced): use ConfirmModal
+    const ok = await confirm({
+      title: `Delete coupon ${code}?`,
+      message: 'This cannot be undone. Usage history on existing orders will be preserved.',
+      confirmLabel: 'Delete Coupon',
+      danger: true,
+    })
+    if (!ok) return
     await supabase.from('coupons').delete().eq('id', id)
     setCoupons(prev => prev.filter(c => c.id !== id))
     toast.success('Coupon deleted')
@@ -119,8 +147,15 @@ export default function CouponsPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">Value</label>
-                <input className="input" type="number" value={form.value}
+                <label className="text-xs text-gray-600 mb-1 block">
+                  Value
+                  {/* QA FIX — CPN-028: hint that % cannot exceed 100 */}
+                  {form.type === 'percentage' && <span className="text-gray-400 ml-1">(max 100)</span>}
+                </label>
+                <input className="input" type="number"
+                  min="1"
+                  max={form.type === 'percentage' ? 100 : undefined}
+                  value={form.value}
                   onChange={e => setForm(p => ({ ...p, value: e.target.value }))}
                   placeholder={form.type === 'percentage' ? '20' : '500'} />
               </div>
@@ -188,7 +223,7 @@ export default function CouponsPage() {
                   <button type="button" onClick={() => toggle(c.id, c.is_active)} className="btn btn-secondary text-xs">
                     {c.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button type="button" onClick={() => del(c.id)} className="p-1.5 hover:bg-red-50 rounded">
+                  <button type="button" onClick={() => del(c.id, c.code)} className="p-1.5 hover:bg-red-50 rounded">
                     <Trash2 size={14} className="text-red-400" />
                   </button>
                 </div>
@@ -197,6 +232,8 @@ export default function CouponsPage() {
           ))}
         </div>
       </div>
+      {/* QA FIX — render ConfirmModal portal */}
+      {ConfirmModal}
     </AdminLayout>
   )
 }

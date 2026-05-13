@@ -1,4 +1,5 @@
 'use client'
+// QA FIXES: PROD-005 (neg price), PROD-006 (sale>orig), PROD-008 (neg stock), PROD-027/028 (img validation)
 import { useEffect, useState, useRef } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
@@ -89,7 +90,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setUploadingVideo(false)
   }
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp']
   const uploadImage = async (file: File) => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) { toast.error('Unsupported format. Use JPEG, PNG, or WebP.'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error('File too large. Maximum size is 5MB.'); return }
     setUploading(true)
     try {
       const { data: cfg } = await supabase.from('site_config').select('value').eq('key', 'cloudinary_cloud_name').single()
@@ -143,6 +147,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const save = async () => {
     if (!form) return
+    const origPrice = Number(form.original_price)
+    if (origPrice <= 0) { toast.error('Original price must be greater than ₹0'); return }
+    const salePrice = form.sale_price ? Number(form.sale_price) : null
+    if (salePrice !== null && salePrice >= origPrice) { toast.error('Sale price must be less than original price'); return }
+    const hasNegStock = variants.some((v: any) => Number(v.stock) < 0)
+    if (hasNegStock) { toast.error('Stock cannot be negative'); return }
     setSaving(true)
 
     // Fix — also update slug when name changes so storefront shows correct name
@@ -381,8 +391,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </div>
                 <div className="w-28">
                   <label className="text-xs text-gray-500 mb-1 block">Stock</label>
-                  <input type="number" className="input" value={v.stock}
-                    onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: e.target.value } : x))} />
+                  <input type="number" min="0" className="input" value={v.stock}
+                    onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Math.max(0, Number(e.target.value)) } : x))} />
                 </div>
                 <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))}
                   className="p-2 text-red-400 hover:text-red-600 mb-0.5">

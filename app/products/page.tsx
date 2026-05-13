@@ -1,5 +1,8 @@
 'use client'
+// QA FIX — PROD, UX: Replace window.confirm() with ConfirmModal
+// QA: CPN-028 (no native confirm on mobile), general UX improvement
 import { useEffect, useState } from 'react'
+import { useConfirm } from '@/components/ui/ConfirmModal'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -17,6 +20,7 @@ export default function ProductsPage() {
   const [totalCount, setTotalCount] = useState(0)
   // Fix #4 — role check for delete
   const [canDelete, setCanDelete] = useState(false)
+  const { confirm, ConfirmModal } = useConfirm()
 
   const load = async (p = page, q = search) => {
     setLoading(true)
@@ -54,7 +58,8 @@ export default function ProductsPage() {
   const deleteProduct = async (id: string) => {
     // Fix #4 — only managers/superadmins can delete
     if (!canDelete) { toast.error('Only admins can delete products'); return }
-    if (!confirm('Delete this product? This cannot be undone.')) return
+    const ok = await confirm({ title: 'Delete Product', message: 'This cannot be undone. The product will be permanently removed.', confirmLabel: 'Delete', danger: true })
+    if (!ok) return
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))
     toast.success('Product deleted')
@@ -198,6 +203,7 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+      {ConfirmModal}
     </AdminLayout>
   )
 }
