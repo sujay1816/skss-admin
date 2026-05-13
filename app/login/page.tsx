@@ -51,7 +51,10 @@ export default function AdminLoginPage() {
       setLoading(false); return
     }
 
-    router.push('/dashboard')
+    // FIX: router.push is client-side navigation — Supabase auth cookie may not
+    // be committed to the browser before middleware runs, causing immediate
+    // redirect back to /login. Full reload guarantees cookie is sent with request.
+    window.location.href = '/dashboard'
   }
 
   return (

@@ -14,25 +14,36 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   // Fix #4 — role check for delete
   const [canDelete, setCanDelete] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.from('products')
-        .select('*, categories(name), product_images(url,is_primary), product_variants(stock)')
-        .order('created_at', { ascending: false })
-      setProducts(data || [])
-      setLoading(false)
-      // Check if current user is manager or superadmin
+  const load = async (p = page, q = search) => {
+    setLoading(true)
+    // FIX: server-side pagination — only fetch current page from DB
+    // Previously fetched ALL products then paginated in JS — slow with 500+ products
+    const from = (p - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+    let query = supabase.from('products')
+      .select('*, categories(name), product_images(url,is_primary), product_variants(stock)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    if (q) query = query.ilike('name', `%${q}%`)
+    const { data, count } = await query
+    setProducts(data || [])
+    setTotalCount(count || 0)
+    setLoading(false)
+    // Check if current user is manager or superadmin (only once)
+    if (p === 1 && !q) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
         setCanDelete(['admin','manager','superadmin'].includes(profile?.role || ''))
       }
     }
-    load()
-  }, [])
+  }
+
+  useEffect(() => { load(1, '') }, [])
 
   const toggleActive = async (id: string, is_active: boolean) => {
     await supabase.from('products').update({ is_active: !is_active }).eq('id', id)
@@ -49,14 +60,13 @@ export default function ProductsPage() {
     toast.success('Product deleted')
   }
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.categories?.name || '').toLowerCase().includes(search.toLowerCase())
-  )
+  // Search now triggers a new DB query (not client-side filter)
+  // The `load` function already applies .ilike() when search is set
+  const filtered = products  // kept for JSX compatibility below
 
-  // Fix #26 — pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // Server-side pagination — totalCount comes from DB, products is already the page slice
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+  const paginated = products  // already fetched as a page slice
 
   return (
     <AdminLayout>
@@ -74,10 +84,10 @@ export default function ProductsPage() {
             <div className="relative flex-1 max-w-xs">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input className="input pl-9" style={{ height: 36 }} placeholder="Search products..."
-                value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+                value={search} onChange={e => { const v = e.target.value; setSearch(v); setPage(1); load(1, v) }} />
             </div>
             <p className="text-xs text-gray-400 hidden sm:block">
-              {filtered.length} results{totalPages > 1 ? ` · Page ${page}/${totalPages}` : ''}
+              {totalCount} results{totalPages > 1 ? ` · Page ${page}/${totalPages}` : ''}
             </p>
           </div>
 
@@ -175,12 +185,12 @@ export default function ProductsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-3 p-4 border-t border-gray-100">
-              <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              <button type="button" onClick={() => { const p = Math.max(1, page - 1); setPage(p); load(p, search) }} disabled={page === 1}
                 className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
                 <ChevronLeft size={16} />
               </button>
               <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-              <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              <button type="button" onClick={() => { const p = Math.min(totalPages, page + 1); setPage(p); load(p, search) }} disabled={page === totalPages}
                 className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
                 <ChevronRight size={16} />
               </button>

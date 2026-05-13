@@ -24,27 +24,32 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const PAGE_SIZE = 30
 
-  useEffect(() => {
-    const load = async () => {
-      let q = supabase.from('orders').select('*, profiles(full_name, email, phone)').order('created_at', { ascending: false })
-      if (statusFilter) q = q.eq('status', statusFilter)
-      const { data } = await q
-      setOrders(data || [])
-      setLoading(false)
-    }
-    load()
-  }, [statusFilter])
+  const load = async (p = 1, s = search, st = statusFilter) => {
+    setLoading(true)
+    // FIX: server-side pagination — only fetch current page from DB
+    const from = (p - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+    let q = supabase.from('orders')
+      .select('*, profiles(full_name, email, phone)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    if (st) q = q.eq('status', st)
+    if (s) q = q.or(`order_number.ilike.%${s}%`)
+    const { data, count } = await q
+    setOrders(data || [])
+    setTotalCount(count || 0)
+    setLoading(false)
+  }
 
-  const filtered = orders.filter(o => !search ||
-    (o.order_number || '').includes(search) ||
-    (o.profiles?.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (o.profiles?.email || '').toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => { load(1, '', statusFilter) }, [statusFilter])
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // Search and pagination are server-side — no client-side filter needed
+  const filtered = orders
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+  const paginated = orders
 
   return (
     <AdminLayout>
@@ -54,9 +59,9 @@ export default function OrdersPage() {
           <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className="input pl-9" style={{ height: 36, width: 240 }} placeholder="Search by order #, name, email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+              <input className="input pl-9" style={{ height: 36, width: 240 }} placeholder="Search by order #, name, email..." value={search} onChange={e => { const v = e.target.value; setSearch(v); setPage(1); load(1, v, statusFilter) }} />
             </div>
-            <select className="input" style={{ height: 36, width: 180 }} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
+            <select className="input" style={{ height: 36, width: 180 }} value={statusFilter} onChange={e => { const v = e.target.value; setStatusFilter(v); setPage(1); load(1, search, v) }}>
               <option value="">All Statuses</option>
 
               {['confirmed','shipped','delivered','cancelled','return_requested','return_approved','return_rejected','refunded'].map(s => (
@@ -141,12 +146,12 @@ export default function OrdersPage() {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 mt-4">
-            <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            <button type="button" onClick={() => { const p = Math.max(1, page - 1); setPage(p); load(p, search, statusFilter) }} disabled={page === 1}
               className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm text-gray-600">Page {page} of {totalPages} · {filtered.length} orders</span>
-            <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            <span className="text-sm text-gray-600">Page {page} of {totalPages} · {totalCount} orders</span>
+            <button type="button" onClick={() => { const p = Math.min(totalPages, page + 1); setPage(p); load(p, search, statusFilter) }} disabled={page === totalPages}
               className="p-2 rounded border disabled:opacity-30" style={{ borderColor: '#E5E7EB' }}>
               <ChevronRight size={16} />
             </button>
