@@ -2,7 +2,6 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
-import PullToRefresh from './PullToRefresh'
 import { supabase } from '@/lib/supabase'
 
 interface EBState { hasError: boolean; message: string }
@@ -38,7 +37,6 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBSta
   }
 }
 
-// Mobile top bar — shown only on mobile, sticky at top
 function MobileTopBar({ unreadCount }: { unreadCount: number }) {
   return (
     <div className="md:hidden h-14 flex items-center px-4 border-b sticky top-0 z-30 bg-white shadow-sm"
@@ -56,15 +54,6 @@ function MobileTopBar({ unreadCount }: { unreadCount: number }) {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    // Detect mobile for pull-to-refresh
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check, { passive: true })
-    return () => window.removeEventListener('resize', check)
-  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -79,28 +68,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => { supabase.removeChannel(channel) }
   }, [])
 
-  const pageContent = (
-    <>
-      <MobileTopBar unreadCount={unreadCount} />
-      <div className="p-3 sm:p-4 md:p-6 lg:p-8">{children}</div>
-    </>
-  )
-
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen h-screen overflow-hidden">
+      <div className="flex min-h-screen">
         <Sidebar unreadCount={unreadCount} />
-        {/* On mobile — PullToRefresh wraps content and handles scroll */}
-        {/* On desktop — plain scrollable main */}
-        {isMobile ? (
-          <PullToRefresh>
-            {pageContent}
-          </PullToRefresh>
-        ) : (
-          <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
-            {pageContent}
-          </main>
-        )}
+        <main className="flex-1 overflow-x-hidden min-w-0">
+          <MobileTopBar unreadCount={unreadCount} />
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">{children}</div>
+        </main>
       </div>
     </ErrorBoundary>
   )

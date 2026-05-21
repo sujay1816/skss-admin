@@ -105,37 +105,50 @@ export default function NewProductPage() {
     setLoading(true)
     const slug = form.slug || genSlug(form.name)
     try {
-      const { data: product, error } = await supabase.from('products').insert({
-        name: form.name, slug, description: form.description, fabric: form.fabric, weave_type: form.weaveType,
-        origin_region: form.originRegion, occasion: selectedOccasions, care_instructions: form.careInstructions,
-        blouse_included: form.blouseIncluded, length: Number(form.length) || 5.5, weight_grams: Number(form.weightGrams) || 0,
-        category_id: form.categoryId, original_price: origPrice, sale_price: salePrice,
+      const productData = {
+        name: form.name, slug, description: form.description, fabric: form.fabric,
+        weave_type: form.weaveType, origin_region: form.originRegion,
+        occasion: selectedOccasions, care_instructions: form.careInstructions,
+        blouse_included: form.blouseIncluded, length: Number(form.length) || 5.5,
+        weight_grams: Number(form.weightGrams) || 0, category_id: form.categoryId,
+        original_price: origPrice, sale_price: salePrice,
         discount_percent: form.discountPercent ? Number(form.discountPercent) : null,
-        gst_rate: Number(form.gstRate), is_featured: form.isFeatured, is_bestseller: form.isBestseller, is_active: form.isActive
-      }).select().single()
-      if (error) throw error
-
-      if (images.length > 0) {
-        await supabase.from('product_images').insert(
-          images.map((img, i) => ({ product_id: product.id, url: img.url, public_id: img.publicId, is_primary: img.isPrimary, order_index: i }))
-        )
+        gst_rate: Number(form.gstRate), is_featured: form.isFeatured,
+        is_bestseller: form.isBestseller, is_active: form.isActive,
       }
 
-      // Build variants
-      let variantsToInsert: any[]
+      const imagesData = images.map((img, i) => ({
+        url: img.url, publicId: img.publicId, isPrimary: img.isPrimary,
+      }))
+
+      let variantsData: any[]
       if (isSinglePiece) {
-        variantsToInsert = [{ product_id: product.id, colour: 'Single Piece', colour_hex: '#8B1A2B', stock: singleStock, sku: `${slug}-single`, image_url: null }]
+        variantsData = [{ colour: 'Single Piece', colour_hex: '#8B1A2B', stock: singleStock, sku: `${slug}-single`, image_url: null }]
       } else {
         const validVariants = variants.filter(v => v.colour.trim())
-        variantsToInsert = validVariants.length > 0
+        variantsData = validVariants.length > 0
           ? validVariants.map(v => ({
-              product_id: product.id, colour: v.colour, colour_hex: v.colourHex,
-              stock: Math.max(0, Number(v.stock)), sku: v.sku || `${slug}-${v.colour.toLowerCase().replace(/\s+/g,'-')}`,
+              colour: v.colour, colour_hex: v.colourHex,
+              stock: Math.max(0, Number(v.stock)),
+              sku: v.sku || `${slug}-${v.colour.toLowerCase().replace(/\s+/g,'-')}`,
               image_url: v.imageUrl || null,
             }))
-          : [{ product_id: product.id, colour: 'Default', colour_hex: '#8B1A2B', stock: variants[0] ? Number(variants[0].stock) : 0, sku: `${slug}-default`, image_url: null }]
+          : [{ colour: 'Default', colour_hex: '#8B1A2B', stock: variants[0] ? Number(variants[0].stock) : 0, sku: `${slug}-default`, image_url: null }]
       }
-      await supabase.from('product_variants').insert(variantsToInsert)
+
+      // Use server API — service role key bypasses RLS that blocks browser client inserts
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/create-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ productData, images: imagesData, variants: variantsData }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error || 'Failed to create product')
+
       toast.success('Product created!')
       router.push('/products')
     } catch (e: any) { toast.error(e.message || 'Error creating product') }
