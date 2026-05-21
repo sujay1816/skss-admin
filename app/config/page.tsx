@@ -789,7 +789,7 @@ export default function ConfigPage() {
                   <RefreshCw size={12} /> Reset to defaults
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 {[
                   { key: 'color_primary',    label: 'Primary Color',    desc: 'Buttons, highlights, headings', example: 'Default: #8B1A2B' },
                   { key: 'color_accent',     label: 'Accent Color',     desc: 'Gold accents, tags, borders',   example: 'Default: #C9A84C' },
@@ -830,7 +830,7 @@ export default function ConfigPage() {
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-1">Typography</h2>
               <p className="text-xs text-gray-500 mb-4">Google Fonts — loaded automatically by the storefront.</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 <div>
                   <label className="text-xs text-gray-600 font-medium mb-2 block">Heading Font</label>
                   <select className="input" value={config.font_heading || 'Cormorant Garamond'} onChange={e => setConfig(p => ({ ...p, font_heading: e.target.value }))}>

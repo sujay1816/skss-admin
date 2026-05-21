@@ -158,7 +158,7 @@ export default function NewProductPage() {
             {/* Basic Info */}
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 <F label="Product Name *" col2><input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value, slug: '' }))} /></F>
                 <F label="Fabric Type">
                   <select className="input" value={form.fabric} onChange={e => setForm(p => ({ ...p, fabric: e.target.value }))}>
@@ -195,7 +195,7 @@ export default function NewProductPage() {
             {/* Pricing */}
             <div className="card p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Pricing</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="form-grid-3">
                 <F label="Original Price (₹) *">
                   <input className="input" type="number" min="1" value={form.originalPrice} onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} />
                 </F>

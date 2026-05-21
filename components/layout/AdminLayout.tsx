@@ -2,11 +2,9 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
+import PullToRefresh from './PullToRefresh'
 import { supabase } from '@/lib/supabase'
 
-
-// FIX: Error boundary — catches any JS error in admin pages and shows a
-// graceful fallback instead of a blank white screen.
 interface EBState { hasError: boolean; message: string }
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBState> {
   constructor(props: any) {
@@ -40,8 +38,33 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBSta
   }
 }
 
+// Mobile top bar — shown only on mobile, sticky at top
+function MobileTopBar({ unreadCount }: { unreadCount: number }) {
+  return (
+    <div className="md:hidden h-14 flex items-center px-4 border-b sticky top-0 z-30 bg-white shadow-sm"
+      style={{ borderColor: '#E5E7EB' }}>
+      <div className="w-10 flex-shrink-0" />
+      <p className="text-sm font-semibold text-gray-800 flex-1 text-center">Admin Panel</p>
+      {unreadCount > 0 && (
+        <span className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    // Detect mobile for pull-to-refresh
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check, { passive: true })
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -51,32 +74,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     load()
     const channel = supabase.channel('notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_notifications' }, () => { load() })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_notifications' }, () => load())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [])
 
+  const pageContent = (
+    <>
+      <MobileTopBar unreadCount={unreadCount} />
+      <div className="p-3 sm:p-4 md:p-6 lg:p-8">{children}</div>
+    </>
+  )
+
   return (
     <ErrorBoundary>
-    <div className="flex min-h-screen">
-      <Sidebar unreadCount={unreadCount} />
-      {/* Fix #21 — main content offset on mobile to account for top header */}
-      <main className="flex-1 overflow-x-hidden md:ml-0">
-        {/* Mobile top bar — visible only on mobile */}
-        <div className="md:hidden h-14 flex items-center px-4 border-b sticky top-0 z-30 bg-white"
-          style={{ borderColor: '#E5E7EB' }}>
-          {/* Spacer for hamburger button which is fixed */}
-          <div className="w-10" />
-          <p className="text-sm font-semibold text-gray-800 mx-auto">Admin Panel</p>
-          {unreadCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </div>
-        <div className="p-4 md:p-6 lg:p-8">{children}</div>
-      </main>
-    </div>
-  </ErrorBoundary>
+      <div className="flex min-h-screen h-screen overflow-hidden">
+        <Sidebar unreadCount={unreadCount} />
+        {/* On mobile — PullToRefresh wraps content and handles scroll */}
+        {/* On desktop — plain scrollable main */}
+        {isMobile ? (
+          <PullToRefresh>
+            {pageContent}
+          </PullToRefresh>
+        ) : (
+          <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+            {pageContent}
+          </main>
+        )}
+      </div>
+    </ErrorBoundary>
   )
 }

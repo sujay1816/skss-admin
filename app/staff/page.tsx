@@ -172,7 +172,7 @@ export default function StaffPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
             <p className="text-sm text-gray-500 mt-1">Manage your team's access levels.</p>

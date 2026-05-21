@@ -46,7 +46,7 @@ export default function CustomersPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
             <p className="text-sm text-gray-500">{customers.length} registered customers</p>

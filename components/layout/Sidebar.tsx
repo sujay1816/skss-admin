@@ -236,11 +236,12 @@ export default function Sidebar({ unreadCount }: { unreadCount?: number }) {
 
   return (
     <>
-      {/* Mobile hamburger */}
+      {/* Mobile hamburger — larger tap target */}
       <button type="button"
-        className="fixed top-3 left-3 z-50 md:hidden p-2 rounded-lg shadow-md"
-        style={{ background: '#1A1A1A', color: 'white' }}
-        onClick={() => setOpen(!open)}>
+        className="fixed top-2.5 left-3 z-50 md:hidden flex items-center justify-center rounded-lg shadow-md"
+        style={{ background: '#1A1A1A', color: 'white', width: 40, height: 40 }}
+        onClick={() => setOpen(!open)}
+        aria-label={open ? 'Close menu' : 'Open menu'}>
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
 

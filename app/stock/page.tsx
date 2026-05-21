@@ -189,7 +189,7 @@ export default function StockPage() {
   return (
     <AdminLayout>
       <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
             <p className="text-sm text-gray-500 mt-0.5">Update stock per colour variant</p>

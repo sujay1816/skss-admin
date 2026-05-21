@@ -184,7 +184,7 @@ export default function BannersPage() {
   return (
     <AdminLayout>
       <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hero Banners</h1>
             <p className="text-sm text-gray-500 mt-0.5">Customise the homepage hero section</p>
@@ -351,7 +351,7 @@ export default function BannersPage() {
             {/* TEXT */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Text Content</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 <F label="Badge Text"><input className="input" value={form.badgeText} onChange={e => setForm((p: any) => ({ ...p, badgeText: e.target.value }))} placeholder="e.g. New Collection 2025" /></F>
                 <div />
                 <F label="Heading"><input className="input" value={form.heading} onChange={e => setForm((p: any) => ({ ...p, heading: e.target.value }))} placeholder="e.g. Draped in" /></F>
@@ -363,7 +363,7 @@ export default function BannersPage() {
             {/* CTA */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Call to Action Buttons</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 <F label="Primary Button Label"><input className="input" value={form.ctaLabel} onChange={e => setForm((p: any) => ({ ...p, ctaLabel: e.target.value }))} placeholder="Shop Now" /></F>
                 <F label="Primary Button URL"><input className="input" value={form.ctaUrl} onChange={e => setForm((p: any) => ({ ...p, ctaUrl: e.target.value }))} placeholder="/shop" /></F>
                 <F label="Secondary Button Label"><input className="input" value={form.ctaSecondaryLabel} onChange={e => setForm((p: any) => ({ ...p, ctaSecondaryLabel: e.target.value }))} placeholder="e.g. New Arrivals" /></F>
@@ -374,7 +374,7 @@ export default function BannersPage() {
             {/* STYLE */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-4">Style & Overlay</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="form-grid-2">
                 <F label="Overlay Style">
                   <select className="input" value={form.overlayStyle} onChange={e => setForm((p: any) => ({ ...p, overlayStyle: e.target.value }))}>
                     {OVERLAY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

@@ -131,3 +131,129 @@ tr:last-child td { border-bottom: none; }
 
 /* ── Toast tweaks ── */
 .react-hot-toast { font-size: 13px !important; }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE ADMIN — added for mobile + laptop
+   ══════════════════════════════════════════════ */
+
+/* ── Page header — stacks on mobile ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header-actions { width: 100%; }
+  .page-header-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* ── Stats grid — fluid columns ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+@media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+@media (max-width: 480px) { .pipeline-grid { grid-template-columns: 1fr; } }
+@media (min-width: 481px) and (max-width: 767px) { .pipeline-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ── Form grids ── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .form-grid-2 .col-span-2 { grid-column: 1; }
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 640px) { .form-grid-3 { grid-template-columns: 1fr; } }
+@media (min-width: 641px) and (max-width: 900px) { .form-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Responsive table wrapper ── */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 10px;
+  border: 1px solid #E5E7EB;
+}
+.table-wrap table { min-width: 600px; }
+
+/* ── Filter bar — wraps on mobile ── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+.filter-bar .input { min-width: 160px; }
+@media (max-width: 640px) {
+  .filter-bar { flex-direction: column; }
+  .filter-bar .input,
+  .filter-bar select,
+  .filter-bar .btn { width: 100% !important; }
+}
+
+/* ── Card padding — tighter on mobile ── */
+@media (max-width: 640px) {
+  .card { border-radius: 8px; }
+  .card-body { padding: 12px !important; }
+}
+
+/* ── Admin layout content ── */
+@media (max-width: 768px) {
+  main .p-4, main .p-6, main .p-8 { padding: 12px !important; }
+}
+
+/* ── Sidebar width on small laptops ── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root { --sidebar-width: 200px; }
+}
+
+/* ── Touch targets ── */
+@media (hover: none) {
+  .btn { min-height: 44px; }
+  .input { min-height: 44px; }
+}
+
+/* ── Truncate long text in table cells ── */
+.cell-truncate {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1024px) { .cell-truncate { max-width: 120px; } }
+
+/* ── Mobile-only visible ── */
+.mobile-only { display: block; }
+@media (min-width: 768px) { .mobile-only { display: none !important; } }
+.desktop-only { display: none; }
+@media (min-width: 768px) { .desktop-only { display: block !important; } }

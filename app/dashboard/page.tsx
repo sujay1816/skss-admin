@@ -65,7 +65,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="stats-grid">
           {[
             { label: 'Total Orders', value: stats.totalOrders, sub: `${stats.todayOrders} today`, icon: ShoppingBag, color: '#8B1A2B' },
             { label: 'Revenue', value: `₹${stats.totalRevenue.toLocaleString('en-IN')}`, sub: 'Paid orders only', icon: TrendingUp, color: '#C9A84C' },
@@ -82,7 +82,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Order pipeline */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="pipeline-grid">
           {[
             { label: 'Pending', value: stats.pendingOrders, icon: Clock, color: '#F59E0B', href: '/orders?status=confirmed' },
             { label: 'Shipped', value: stats.shippedOrders, icon: Truck, color: '#3B82F6', href: '/orders?status=shipped' },
