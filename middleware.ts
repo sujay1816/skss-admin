@@ -1,27 +1,19 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// All valid staff roles — includes 'manager' for backward compatibility
 const STAFF_ROLES = ['staff', 'admin', 'manager', 'superadmin']
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QA FIX — AUTH-040 / SEC-015: In-memory rate limiting for login attempts
-// Tracks failed login attempts per IP with a sliding window.
-// Limitations: resets on server restart (use Redis/Upstash for production persistence).
-// For Vercel Edge deployments this is per-instance; for production use Upstash Rate Limit.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Rate limiting ─────────────────────────────────────────────────────────────
 interface RateLimitEntry { count: number; resetAt: number }
 const loginAttempts = new Map<string, RateLimitEntry>()
-
-const RATE_LIMIT_MAX = 10        // max login attempts per window
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000  // 15 minutes in ms
-const LOCKOUT_DURATION = 15 * 60 * 1000   // 15 minutes lockout
+const RATE_LIMIT_MAX    = 10
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000
+const LOCKOUT_DURATION  = 15 * 60 * 1000
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now()
   const entry = loginAttempts.get(ip)
   if (!entry || now > entry.resetAt) {
-    // Window expired or first attempt — reset
     loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
     return false
   }
@@ -33,23 +25,80 @@ function isRateLimited(ip: string): boolean {
 function getRateLimitHeaders(ip: string): Record<string, string> {
   const entry = loginAttempts.get(ip)
   const remaining = entry ? Math.max(0, RATE_LIMIT_MAX - entry.count) : RATE_LIMIT_MAX
-  const resetAt = entry ? Math.ceil(entry.resetAt / 1000) : Math.ceil((Date.now() + RATE_LIMIT_WINDOW) / 1000)
+  const resetAt   = entry ? Math.ceil(entry.resetAt / 1000) : Math.ceil((Date.now() + RATE_LIMIT_WINDOW) / 1000)
   return {
-    'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+    'X-RateLimit-Limit':     String(RATE_LIMIT_MAX),
     'X-RateLimit-Remaining': String(remaining),
-    'X-RateLimit-Reset': String(resetAt),
+    'X-RateLimit-Reset':     String(resetAt),
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QA FIX — AUTH-029: Safe redirect — only allow relative paths, never external URLs.
-// Prevents open redirect: /login?redirect=https://evil.com
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Safe redirect ─────────────────────────────────────────────────────────────
 function safeRedirectPath(param: string | null, fallback: string): string {
   if (!param) return fallback
-  // Must start with / and not be a protocol-relative URL (//evil.com)
   if (param.startsWith('/') && !param.startsWith('//')) return param
   return fallback
+}
+
+// ── Route → permission key mapping ───────────────────────────────────────────
+// Longer paths must come before shorter ones — matched by longest prefix
+const ROUTE_PERMISSIONS: Record<string, string> = {
+  // Products — edit routes checked separately from view
+  '/products/new':     'products_edit',
+  '/products/bulk':    'products_edit',
+  '/products/':        'products_edit',   // /products/[id] — edit product
+  '/products':         'products_view',
+
+  // Orders — detail page needs view, but action buttons check edit client-side
+  '/orders/':          'orders_view',     // /orders/[id]
+  '/orders':           'orders_view',
+
+  '/banners':          'banners',
+  '/categories':       'categories',
+  '/config':           'config',
+  '/coupons':          'coupons',
+  '/customers':        'customers',
+  '/notifications':    'notifications',
+  '/pages':            'pages',
+  '/permissions':      'permissions',
+  '/reset':            'reset',
+  '/returns':          'returns',
+  '/reviews':          'reviews',
+  '/staff':            'staff',
+  '/stock':            'stock',
+  // /dashboard — accessible to all staff, no permission key needed
+}
+
+// ── Default permissions ────────────────────────────────────────────────────────
+// Single source of truth — mirrors DEFAULT_PERMISSIONS in permissions/page.tsx
+// Used when site_config has no saved value, or key is missing from saved value
+const DEFAULT_ROLE_PERMS: Record<string, Record<string, boolean>> = {
+  staff: {
+    dashboard: true,
+    orders_view: true, orders_edit: true,
+    products_view: true, products_edit: true, products_delete: false,
+    stock: true,
+    customers: true, customers_block: false,
+    reviews: true,
+    banners: false, categories: false, pages: false,
+    coupons: true, coupons_manage: false,
+    returns: true,
+    notifications: true,
+    config: false, staff: false, permissions: false, reset: false,
+  },
+  admin: {
+    dashboard: true,
+    orders_view: true, orders_edit: true,
+    products_view: true, products_edit: true, products_delete: true,
+    stock: true,
+    customers: true, customers_block: true,
+    reviews: true,
+    banners: true, categories: true, pages: true,
+    coupons: true, coupons_manage: true,
+    returns: true,
+    notifications: true,
+    config: true, staff: true, permissions: false, reset: false,
+  },
 }
 
 export async function middleware(request: NextRequest) {
@@ -72,22 +121,20 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  // ── Rate limit the login POST (API calls) and GET (page loads spam) ──────
-  // QA: AUTH-040, SEC-015
+  // ── Login route ───────────────────────────────────────────────────────────
   if (path === '/login') {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || request.headers.get('x-real-ip')
       || '127.0.0.1'
 
     if (isRateLimited(ip)) {
-      const retryAfter = Math.ceil(LOCKOUT_DURATION / 1000)
       return new NextResponse(
         JSON.stringify({ error: 'Too many login attempts. Please try again in 15 minutes.' }),
         {
           status: 429,
           headers: {
             'Content-Type': 'application/json',
-            'Retry-After': String(retryAfter),
+            'Retry-After': String(Math.ceil(LOCKOUT_DURATION / 1000)),
             ...getRateLimitHeaders(ip),
           },
         }
@@ -97,7 +144,6 @@ export async function middleware(request: NextRequest) {
     if (user) {
       const { data: profile } = await supabase.from('profiles')
         .select('role, is_blocked').eq('id', user.id).single()
-      // Redirect to dashboard if already logged in with valid non-blocked role
       if (profile && STAFF_ROLES.includes(profile.role) && !profile.is_blocked) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
@@ -105,24 +151,17 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // ── Auth check ────────────────────────────────────────────────────────────
   if (!user) {
-    // QA FIX — AUTH-029: Validate redirect param is a safe relative path
-    const redirectTo = safeRedirectPath(
-      request.nextUrl.searchParams.get('redirect'),
-      path
-    )
+    const redirectTo = safeRedirectPath(request.nextUrl.searchParams.get('redirect'), path)
     const loginUrl = new URL('/login', request.url)
-    // Only preserve redirect param for non-login paths
-    if (redirectTo !== '/login') {
-      loginUrl.searchParams.set('redirect', redirectTo)
-    }
+    if (redirectTo !== '/login') loginUrl.searchParams.set('redirect', redirectTo)
     return NextResponse.redirect(loginUrl)
   }
 
   const { data: profile } = await supabase.from('profiles')
     .select('role, is_blocked').eq('id', user.id).single()
 
-  // Fix #3 — check all valid roles including 'admin' (was missing 'admin')
   if (!profile || !STAFF_ROLES.includes(profile.role)) {
     return NextResponse.redirect(new URL('/login?error=unauthorized', request.url))
   }
@@ -132,57 +171,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=blocked', request.url))
   }
 
-  // Fix #1 — enforce permissions from site_config for non-superadmin roles
-  // Map URL paths to permission keys
-  const ROUTE_PERMISSIONS: Record<string, string> = {
-    '/banners':          'banners',
-    '/categories':       'categories',
-    '/config':           'config',
-    '/coupons':          'coupons',
-    '/customers':        'customers',
-    '/notifications':    'notifications',
-    '/orders':           'orders_view',
-    '/pages':            'pages',
-    '/permissions':      'permissions',
-    '/products':         'products_view',
-    '/products/new':     'products_edit',
-    '/products/bulk':    'products_edit',
-    '/reset':            'reset',
-    '/returns':          'returns',
-    '/reviews':          'reviews',
-    '/staff':            'staff',
-    '/stock':            'stock',
-  }
-
-  // Default permissions — used when site_config has no saved value for a key
-  const DEFAULT_ROLE_PERMS: Record<string, Record<string, boolean>> = {
-    staff: {
-      dashboard: true, orders_view: true, returns: true,
-      products_view: true, products_edit: true, stock: true, categories: false,
-      customers: true, reviews: true, coupons: true,
-      banners: false, pages: false,
-      notifications: true, staff: false, permissions: false, config: false, reset: false,
-    },
-    admin: {
-      dashboard: true, orders_view: true, returns: true,
-      products_view: true, products_edit: true, stock: true, categories: true,
-      customers: true, reviews: true, coupons: true,
-      banners: true, pages: true,
-      notifications: true, staff: true, permissions: false, config: true, reset: false,
-    },
-  }
-
-  // Superadmin always has full access — skip permission check
+  // ── Permission check (non-superadmin only) ────────────────────────────────
   if (profile.role !== 'superadmin') {
-    // Match longest route first — /products/new before /products
+    // Find longest matching route prefix
     const matchedRoute = Object.keys(ROUTE_PERMISSIONS)
-      .filter(route => path === route || path.startsWith(route + '/'))
+      .filter(route => {
+        if (route.endsWith('/')) return path.startsWith(route) && path.length > route.length
+        return path === route || path.startsWith(route + '/')
+      })
       .sort((a, b) => b.length - a.length)[0]
+
     const permKey = matchedRoute ? ROUTE_PERMISSIONS[matchedRoute] : undefined
 
     if (permKey) {
       const roleKey = profile.role === 'manager' ? 'admin' : profile.role
-      let allowed = true  // default to allow if no config found
+      let allowed = true
 
       const { data: permConfig } = await supabase.from('site_config')
         .select('value').eq('key', 'role_permissions').maybeSingle()
@@ -191,17 +194,15 @@ export async function middleware(request: NextRequest) {
         try {
           const allPerms = JSON.parse(permConfig.value)
           const rolePerms = allPerms[roleKey] || {}
-          // If key exists in saved config, use that value
-          // If key is missing from saved config, fall back to DEFAULT_ROLE_PERMS
-          if (permKey in rolePerms) {
-            allowed = rolePerms[permKey] !== false
-          } else {
-            allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] !== false
-          }
-        } catch {}
+          // Use saved value if key exists, otherwise fall back to DEFAULT_ROLE_PERMS
+          allowed = permKey in rolePerms
+            ? rolePerms[permKey] !== false
+            : (DEFAULT_ROLE_PERMS[roleKey]?.[permKey] ?? true)
+        } catch {
+          allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] ?? true
+        }
       } else {
-        // No saved config — use defaults
-        allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] !== false
+        allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] ?? true
       }
 
       if (!allowed) {
@@ -213,4 +214,6 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'] }
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
+}

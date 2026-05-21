@@ -32,28 +32,35 @@ const FEATURES = [
 
 const GROUPS = ['Core', 'Orders', 'Products', 'Customers', 'Content', 'Marketing', 'Settings']
 
-// Default permissions for each role
+// Default permissions for each role — must match DEFAULT_ROLE_PERMS in middleware.ts
 const DEFAULT_PERMISSIONS: Record<string, Record<string, boolean>> = {
   staff: {
-    dashboard: true, orders_view: true, orders_edit: true,
+    dashboard: true,
+    orders_view: true, orders_edit: true,
     products_view: true, products_edit: true, products_delete: false,
-    stock: true, customers: true, customers_block: false,
-    reviews: true, banners: false, categories: false, pages: false,
-    coupons: true, coupons_manage: false, returns: true,
-    notifications: true, config: false, staff: false,
-    permissions: false, reset: false,
+    stock: true,
+    customers: true, customers_block: false,
+    reviews: true,
+    banners: false, categories: false, pages: false,
+    coupons: true, coupons_manage: false,
+    returns: true,
+    notifications: true,
+    config: false, staff: false, permissions: false, reset: false,
   },
   admin: {
-    dashboard: true, orders_view: true, orders_edit: true,
+    dashboard: true,
+    orders_view: true, orders_edit: true,
     products_view: true, products_edit: true, products_delete: true,
-    stock: true, customers: true, customers_block: true,
-    reviews: true, banners: true, categories: true, pages: true,
-    coupons: true, coupons_manage: true, returns: true,
-    notifications: true, config: true, staff: true,
-    permissions: false, reset: false,
+    stock: true,
+    customers: true, customers_block: true,
+    reviews: true,
+    banners: true, categories: true, pages: true,
+    coupons: true, coupons_manage: true,
+    returns: true,
+    notifications: true,
+    config: true, staff: true, permissions: false, reset: false,
   },
   superadmin: {
-    // Superadmin always has all permissions — cannot be changed
     dashboard: true, orders_view: true, orders_edit: true,
     products_view: true, products_edit: true, products_delete: true,
     stock: true, customers: true, customers_block: true,
@@ -111,9 +118,10 @@ export default function PermissionsPage() {
 
   const save = async () => {
     setSaving(true)
+    // Merge with defaults to ensure all keys are present — prevents missing key issues in middleware
     const toSave = {
-      staff: permissions.staff,
-      admin: permissions.admin,
+      staff:    { ...DEFAULT_PERMISSIONS.staff,    ...permissions.staff },
+      admin:    { ...DEFAULT_PERMISSIONS.admin,    ...permissions.admin },
     }
     await supabase.from('site_config').upsert(
       { key: 'role_permissions', value: JSON.stringify(toSave) },
@@ -151,12 +159,12 @@ export default function PermissionsPage() {
   return (
     <AdminLayout>
       <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Role Permissions</h1>
             <p className="text-sm text-gray-500 mt-0.5">Control what each role can access in the admin panel</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 page-header-actions">
             <button type="button" onClick={reset} className="btn btn-secondary flex items-center gap-2">
               <RefreshCw size={14} /> Reset Defaults
             </button>
@@ -167,7 +175,7 @@ export default function PermissionsPage() {
         </div>
 
         {/* Role selector */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { role: 'staff', label: 'Staff', icon: Users, desc: 'Basic access', color: '#374151', bg: '#F3F4F6' },
             { role: 'admin', label: 'Admin', icon: Shield, desc: 'Extended access', color: '#1E40AF', bg: '#EFF6FF' },
