@@ -37,19 +37,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       const today = new Date().toISOString().split('T')[0]
-      const [ordersRes, todayOrdersRes, revenueRes, customersRes, pendingRes, shippedRes, deliveredRes, productsRes, recentRes] = await Promise.all([
+      const [ordersRes, todayOrdersRes, customersRes, pendingRes, shippedRes, deliveredRes, productsRes, recentRes] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }),
         supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today),
-        supabase.rpc('get_total_revenue').maybeSingle().catch(() => ({ data: null })),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
-
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'confirmed'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'shipped'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'delivered'),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('orders').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(8),
       ])
-      const totalRevenue = Number((revenueRes as any)?.data?.sum || (revenueRes as any)?.data?.total || 0)
+      let totalRevenue = 0
+      try {
+        const revenueRes = await supabase.rpc('get_total_revenue').maybeSingle()
+        totalRevenue = Number((revenueRes.data as any)?.sum || (revenueRes.data as any)?.total || 0)
+      } catch {}
       setStats({ totalOrders: ordersRes.count || 0, todayOrders: todayOrdersRes.count || 0, totalRevenue, totalCustomers: customersRes.count || 0, pendingOrders: pendingRes.count || 0, shippedOrders: shippedRes.count || 0, deliveredOrders: deliveredRes.count || 0, totalProducts: productsRes.count || 0 })
       setRecentOrders(recentRes.data || [])
       setLoading(false)
