@@ -27,7 +27,13 @@ export default function CouponsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         supabase.from('profiles').select('role').eq('id', user.id).single()
-          .then(({ data }) => setCanManage(['admin','manager','superadmin'].includes(data?.role || '')))
+          .then(({ data }) => {
+            const role = data?.role || ''
+            // superadmin always can manage
+            // admin can manage by default (coupons_manage: true in DEFAULT_ROLE_PERMS)
+            // staff cannot manage by default
+            setCanManage(['admin', 'manager', 'superadmin'].includes(role))
+          })
       }
     })
   }, [])

@@ -37,12 +37,29 @@ export default function ProductsPage() {
     setProducts(data || [])
     setTotalCount(count || 0)
     setLoading(false)
-    // Check if current user is manager or superadmin (only once)
+    // Check delete permission — uses products_delete from site_config permissions
     if (p === 1 && !q) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        setCanDelete(['admin','manager','superadmin'].includes(profile?.role || ''))
+        const role = profile?.role || ''
+        if (role === 'superadmin') {
+          setCanDelete(true)
+        } else if (['admin', 'manager'].includes(role)) {
+          // Check if products_delete is explicitly disabled in site_config
+          const { data: permConfig } = await supabase.from('site_config')
+            .select('value').eq('key', 'role_permissions').maybeSingle()
+          if (permConfig?.value) {
+            try {
+              const allPerms = JSON.parse(permConfig.value)
+              const roleKey = role === 'manager' ? 'admin' : role
+              const saved = allPerms[roleKey]?.products_delete
+              setCanDelete(saved !== false)  // true if key missing (default allow for admin)
+            } catch { setCanDelete(true) }
+          } else { setCanDelete(true) }
+        } else {
+          setCanDelete(false)  // staff cannot delete by default
+        }
       }
     }
   }
@@ -76,7 +93,7 @@ export default function ProductsPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="page-header">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Products</h1>
             <p className="text-sm text-gray-500">{products.length} total</p>

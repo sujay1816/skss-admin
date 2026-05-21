@@ -40,7 +40,7 @@ export default function DashboardPage() {
       const [ordersRes, todayOrdersRes, revenueRes, customersRes, pendingRes, shippedRes, deliveredRes, productsRes, recentRes] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }),
         supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today),
-        supabase.rpc('get_total_revenue').maybeSingle(),
+        supabase.rpc('get_total_revenue').maybeSingle().catch(() => ({ data: null })),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
 
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'confirmed'),
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('orders').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(8),
       ])
-      const totalRevenue = Number((revenueRes.data as any)?.sum || 0)
+      const totalRevenue = Number((revenueRes as any)?.data?.sum || (revenueRes as any)?.data?.total || 0)
       setStats({ totalOrders: ordersRes.count || 0, todayOrders: todayOrdersRes.count || 0, totalRevenue, totalCustomers: customersRes.count || 0, pendingOrders: pendingRes.count || 0, shippedOrders: shippedRes.count || 0, deliveredOrders: deliveredRes.count || 0, totalProducts: productsRes.count || 0 })
       setRecentOrders(recentRes.data || [])
       setLoading(false)

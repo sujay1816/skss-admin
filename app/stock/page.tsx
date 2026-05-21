@@ -90,17 +90,12 @@ export default function StockPage() {
     if (changedVariants.length === 0) { toast.error('No changes to save'); return }
     setSaving(true)
     try {
-      // Update each variant individually
-      for (const cv of changedVariants) {
-        await supabase.from('product_variants').update({ stock: cv.newStock }).eq('id', cv.variantId)
-      }
-      // Update product total stock for each affected product
-      const affectedProductIds = [...new Set(changedVariants.map(cv => cv.productId))]
-      for (const productId of affectedProductIds) {
-        const { data: vars } = await supabase.from('product_variants').select('stock').eq('product_id', productId)
-        const totalStock = (vars || []).reduce((s: number, v: any) => s + v.stock, 0)
-        await supabase.from('products').update({ stock: totalStock }).eq('id', productId)
-      }
+      // Parallel updates — all variants at once instead of sequential loop
+      await Promise.all(
+        changedVariants.map(cv =>
+          supabase.from('product_variants').update({ stock: cv.newStock }).eq('id', cv.variantId)
+        )
+      )
       toast.success(`${changedVariants.length} variant${changedVariants.length > 1 ? 's' : ''} updated!`)
       loadProducts()
     } catch (e: any) { toast.error('Save failed: ' + e.message) }

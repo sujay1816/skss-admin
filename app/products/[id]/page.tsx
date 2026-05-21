@@ -189,11 +189,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     for (const v of variants) {
       if (v.id) {
         await supabase.from('product_variants')
-          .update({ colour: v.colour, colour_hex: v.colour_hex, stock: Number(v.stock) })
+          .update({ colour: v.colour, colour_hex: v.colour_hex, stock: Number(v.stock), image_url: v.image_url || null })
           .eq('id', v.id)
-      } else {
+      } else if (!v.id) {
         await supabase.from('product_variants')
-          .insert({ product_id: params.id, colour: v.colour, colour_hex: v.colour_hex, stock: Number(v.stock) })
+          .insert({ product_id: params.id, colour: v.colour, colour_hex: v.colour_hex, stock: Number(v.stock), image_url: v.image_url || null })
       }
     }
 
@@ -370,34 +370,69 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900">Variants & Stock</h2>
             <button type="button"
-              onClick={() => setVariants(prev => [...prev, { colour: '', colour_hex: '#8B1A2B', stock: 0 }])}
+              onClick={() => setVariants(prev => [...prev, { colour: '', colour_hex: '#8B1A2B', stock: 0, image_url: '' }])}
               className="btn btn-secondary text-xs">
               <Plus size={12} /> Add
             </button>
           </div>
+          <p className="text-xs text-gray-400 mb-3">Upload a photo for each colour — customers see these thumbnails to pick their colour.</p>
           <div className="space-y-3">
             {variants.map((v, i) => (
-              <div key={i} className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500 mb-1 block">Colour Name</label>
-                  <input className="input" placeholder="e.g. Royal Red" value={v.colour}
-                    onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colour: e.target.value } : x))} />
+              <div key={i} className="border rounded-lg p-3" style={{ borderColor: '#E5E7EB' }}>
+                <div className="flex gap-3 items-end flex-wrap">
+                  {/* Variant image */}
+                  <div className="flex-shrink-0">
+                    <label className="text-xs text-gray-500 mb-1 block">Photo</label>
+                    {v.image_url ? (
+                      <div className="relative w-14 h-16 border rounded overflow-hidden" style={{ borderColor: 'var(--crimson)' }}>
+                        <img src={v.image_url} alt={v.colour} className="w-full h-full object-cover" />
+                        <button type="button"
+                          onClick={() => setVariants(prev => prev.map((x, j) => j === i ? { ...x, image_url: '' } : x))}
+                          className="absolute top-0 right-0 bg-black/60 rounded-bl p-0.5">
+                          <X size={10} className="text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-14 h-16 border-2 border-dashed rounded cursor-pointer hover:border-red-300 transition-colors"
+                        style={{ borderColor: '#E5E7EB' }}>
+                        <Upload size={12} className="text-gray-400 mb-0.5" />
+                        <span className="text-xs text-gray-400" style={{ fontSize: 9 }}>Upload</span>
+                        <input type="file" className="hidden" accept="image/*"
+                          onChange={async e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const { data: cfg } = await supabase.from('site_config').select('value').eq('key', 'cloudinary_cloud_name').single()
+                            if (!cfg?.value) return
+                            const fd = new FormData()
+                            fd.append('file', file); fd.append('upload_preset', 'skss_products'); fd.append('folder', 'skss/variants')
+                            const res = await fetch(`https://api.cloudinary.com/v1_1/${cfg.value}/image/upload`, { method: 'POST', body: fd })
+                            const data = await res.json()
+                            if (data.secure_url) setVariants(prev => prev.map((x, j) => j === i ? { ...x, image_url: data.secure_url } : x))
+                          }} />
+                      </label>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="text-xs text-gray-500 mb-1 block">Colour Name</label>
+                    <input className="input" placeholder="e.g. Royal Red" value={v.colour}
+                      onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colour: e.target.value } : x))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Swatch</label>
+                    <input type="color" value={v.colour_hex}
+                      onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colour_hex: e.target.value } : x))}
+                      className="w-10 h-10 border rounded cursor-pointer" style={{ padding: 2 }} />
+                  </div>
+                  <div className="w-28">
+                    <label className="text-xs text-gray-500 mb-1 block">Stock</label>
+                    <input type="number" min="0" className="input" value={v.stock}
+                      onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Math.max(0, Number(e.target.value)) } : x))} />
+                  </div>
+                  <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))}
+                    className="p-2 text-red-400 hover:text-red-600">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Swatch</label>
-                  <input type="color" value={v.colour_hex}
-                    onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, colour_hex: e.target.value } : x))}
-                    className="w-10 h-10 border rounded cursor-pointer" style={{ padding: 2 }} />
-                </div>
-                <div className="w-28">
-                  <label className="text-xs text-gray-500 mb-1 block">Stock</label>
-                  <input type="number" min="0" className="input" value={v.stock}
-                    onChange={e => setVariants(prev => prev.map((x, j) => j === i ? { ...x, stock: Math.max(0, Number(e.target.value)) } : x))} />
-                </div>
-                <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))}
-                  className="p-2 text-red-400 hover:text-red-600 mb-0.5">
-                  <Trash2 size={14} />
-                </button>
               </div>
             ))}
           </div>

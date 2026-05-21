@@ -26,7 +26,7 @@ interface FormProps {
 const CategoryForm = ({ form, editId, uploading, fileRef, slugify, setForm, onSave, onReset, onUpload }: FormProps) => (
   <div className="card p-5 mb-5">
     <h3 className="font-semibold text-gray-900 mb-4">{editId ? 'Edit Category' : 'New Category'}</h3>
-    <div className="grid grid-cols-2 gap-4">
+    <div className="form-grid-2">
       <div>
         <label className="text-xs text-gray-600 mb-1 block">Name *</label>
         <input

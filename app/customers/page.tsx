@@ -15,12 +15,12 @@ export default function CustomersPage() {
 
   const load = async () => {
     setLoading(true)
-    // Fetch all profiles with role=customer
     const { data } = await supabase
       .from('profiles')
-      .select('*, orders(count)')
+      .select('id, full_name, email, phone, avatar_url, is_blocked, created_at, role')
       .eq('role', 'customer')
       .order('created_at', { ascending: false })
+      .limit(500)  // cap at 500 — use search for more
     setCustomers(data || [])
     setLoading(false)
   }

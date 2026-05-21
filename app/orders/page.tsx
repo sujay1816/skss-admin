@@ -37,7 +37,7 @@ export default function OrdersPage() {
       .order('created_at', { ascending: false })
       .range(from, to)
     if (st) q = q.eq('status', st)
-    if (s) q = q.or(`order_number.ilike.%${s}%`)
+    if (s) q = q.or(`order_number.ilike.%${s}%,profiles.full_name.ilike.%${s}%,profiles.email.ilike.%${s}%`)
     const { data, count } = await q
     setOrders(data || [])
     setTotalCount(count || 0)
