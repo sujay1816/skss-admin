@@ -135,44 +135,77 @@ export async function middleware(request: NextRequest) {
   // Fix #1 — enforce permissions from site_config for non-superadmin roles
   // Map URL paths to permission keys
   const ROUTE_PERMISSIONS: Record<string, string> = {
-    '/banners':      'banners',
-    '/categories':   'categories',
-    '/config':       'config',
-    '/coupons':      'coupons',
-    '/customers':    'customers',
-    '/notifications':'notifications',
-    '/orders':       'orders_view',
-    '/pages':        'pages',
-    '/permissions':  'permissions',
-    '/products':     'products_view',
-    '/reset':        'reset',
-    '/returns':      'returns',
-    '/reviews':      'reviews',
-    '/staff':        'staff',
-    '/stock':        'stock',
+    '/banners':          'banners',
+    '/categories':       'categories',
+    '/config':           'config',
+    '/coupons':          'coupons',
+    '/customers':        'customers',
+    '/notifications':    'notifications',
+    '/orders':           'orders_view',
+    '/pages':            'pages',
+    '/permissions':      'permissions',
+    '/products':         'products_view',
+    '/products/new':     'products_edit',
+    '/products/bulk':    'products_edit',
+    '/reset':            'reset',
+    '/returns':          'returns',
+    '/reviews':          'reviews',
+    '/staff':            'staff',
+    '/stock':            'stock',
+  }
+
+  // Default permissions — used when site_config has no saved value for a key
+  const DEFAULT_ROLE_PERMS: Record<string, Record<string, boolean>> = {
+    staff: {
+      dashboard: true, orders_view: true, returns: true,
+      products_view: true, products_edit: true, stock: true, categories: false,
+      customers: true, reviews: true, coupons: true,
+      banners: false, pages: false,
+      notifications: true, staff: false, permissions: false, config: false, reset: false,
+    },
+    admin: {
+      dashboard: true, orders_view: true, returns: true,
+      products_view: true, products_edit: true, stock: true, categories: true,
+      customers: true, reviews: true, coupons: true,
+      banners: true, pages: true,
+      notifications: true, staff: true, permissions: false, config: true, reset: false,
+    },
   }
 
   // Superadmin always has full access — skip permission check
   if (profile.role !== 'superadmin') {
-    const routeBase = '/' + path.split('/')[1]
-    const permKey = ROUTE_PERMISSIONS[routeBase]
+    // Match longest route first — /products/new before /products
+    const matchedRoute = Object.keys(ROUTE_PERMISSIONS)
+      .filter(route => path === route || path.startsWith(route + '/'))
+      .sort((a, b) => b.length - a.length)[0]
+    const permKey = matchedRoute ? ROUTE_PERMISSIONS[matchedRoute] : undefined
 
     if (permKey) {
-      // Load permissions from site_config
+      const roleKey = profile.role === 'manager' ? 'admin' : profile.role
+      let allowed = true  // default to allow if no config found
+
       const { data: permConfig } = await supabase.from('site_config')
         .select('value').eq('key', 'role_permissions').maybeSingle()
 
       if (permConfig?.value) {
         try {
           const allPerms = JSON.parse(permConfig.value)
-          // Normalize role — 'manager' is treated as 'admin'
-          const roleKey = profile.role === 'manager' ? 'admin' : profile.role
           const rolePerms = allPerms[roleKey] || {}
-          if (rolePerms[permKey] === false) {
-            // Redirect to dashboard with access denied message
-            return NextResponse.redirect(new URL('/dashboard?error=access_denied', request.url))
+          // If key exists in saved config, use that value
+          // If key is missing from saved config, fall back to DEFAULT_ROLE_PERMS
+          if (permKey in rolePerms) {
+            allowed = rolePerms[permKey] !== false
+          } else {
+            allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] !== false
           }
         } catch {}
+      } else {
+        // No saved config — use defaults
+        allowed = DEFAULT_ROLE_PERMS[roleKey]?.[permKey] !== false
+      }
+
+      if (!allowed) {
+        return NextResponse.redirect(new URL('/dashboard?error=access_denied', request.url))
       }
     }
   }
