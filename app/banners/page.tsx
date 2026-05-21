@@ -19,17 +19,6 @@ const TEXT_COLOR_OPTIONS = [
   { value: 'dark',  label: 'Dark' },
 ]
 
-const FOCUS_POINTS = [
-  { value: 'top left',     label: '↖', title: 'Top Left' },
-  { value: 'top center',   label: '↑', title: 'Top Center' },
-  { value: 'top right',    label: '↗', title: 'Top Right' },
-  { value: 'center left',  label: '←', title: 'Center Left' },
-  { value: 'center',       label: '●', title: 'Center' },
-  { value: 'center right', label: '→', title: 'Center Right' },
-  { value: 'bottom left',  label: '↙', title: 'Bottom Left' },
-  { value: 'bottom center',label: '↓', title: 'Bottom Center' },
-  { value: 'bottom right', label: '↘', title: 'Bottom Right' },
-]
 
 const DEFAULT_FORM = {
   imageUrl: '', imageFocus: 'center', videoUrl: '',
@@ -206,31 +195,133 @@ export default function BannersPage() {
                 onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
               {form.imageUrl ? (
                 <div className="space-y-3">
-                  <div className="relative w-full rounded-lg overflow-hidden border border-gray-200" style={{ height: 200 }}>
-                    <img src={form.imageUrl} alt="Banner preview" className="w-full h-full"
-                      style={{ objectFit: 'cover', objectPosition: form.imageFocus }} />
-                    <div className="absolute inset-0 bg-black/20 flex items-end p-3">
-                      <span className="text-white text-xs bg-black/50 px-2 py-1 rounded">Preview — Focus: {form.imageFocus}</span>
-                    </div>
-                  </div>
+                  {/* ── Interactive focus picker ── */}
                   <div>
-                    <label className="text-xs text-gray-600 mb-2 block font-medium">Image Focus Point</label>
-                    <div className="grid grid-cols-3 gap-1 w-32">
-                      {FOCUS_POINTS.map(fp => (
-                        <button key={fp.value} type="button" title={fp.title}
-                          onClick={() => setForm((p: any) => ({ ...p, imageFocus: fp.value }))}
-                          className="h-9 w-9 text-sm font-bold rounded border transition-all flex items-center justify-center"
-                          style={{
-                            background: form.imageFocus === fp.value ? 'var(--crimson)' : 'white',
-                            color: form.imageFocus === fp.value ? 'white' : '#6B7280',
-                            borderColor: form.imageFocus === fp.value ? 'var(--crimson)' : '#E5E7EB',
-                          }}>
-                          {fp.label}
-                        </button>
-                      ))}
+                    <label className="text-xs text-gray-600 mb-1.5 block font-medium">
+                      Click anywhere on the image to set the focus point
+                    </label>
+                    <p className="text-xs text-gray-400 mb-2">
+                      The red dot shows which part of the image stays visible on all screen sizes.
+                      Move it to the most important part — usually a face or the saree drape centre.
+                    </p>
+
+                    {/* Clickable image — click sets imageFocus to x% y% */}
+                    <div
+                      className="relative w-full rounded-lg overflow-hidden border-2 border-gray-200 select-none"
+                      style={{ height: 260, cursor: 'crosshair' }}
+                      onClick={e => {
+                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                        const x = Math.round(((e.clientX - rect.left) / rect.width) * 100)
+                        const y = Math.round(((e.clientY - rect.top) / rect.height) * 100)
+                        setForm((p: any) => ({ ...p, imageFocus: `${x}% ${y}%` }))
+                      }}
+                    >
+                      {/* Full image — no object-fit cropping here so user sees the whole thing */}
+                      <img
+                        src={form.imageUrl}
+                        alt="Banner"
+                        className="w-full h-full"
+                        style={{ objectFit: 'cover', objectPosition: form.imageFocus, pointerEvents: 'none' }}
+                        draggable={false}
+                      />
+
+                      {/* Focus dot — positioned at the chosen % */}
+                      {(() => {
+                        const parts = (form.imageFocus || 'center').split(' ')
+                        let px = 50, py = 50
+                        if (parts.length === 2) {
+                          px = parseFloat(parts[0]) || 50
+                          py = parseFloat(parts[1]) || 50
+                        } else if (parts[0] === 'center') { px = 50; py = 50 }
+                        else if (parts[0] === 'top')    { px = 50; py = 0 }
+                        else if (parts[0] === 'bottom') { px = 50; py = 100 }
+                        else if (parts[0] === 'left')   { px = 0;  py = 50 }
+                        else if (parts[0] === 'right')  { px = 100; py = 50 }
+                        return (
+                          <div
+                            className="absolute pointer-events-none"
+                            style={{ left: `${px}%`, top: `${py}%`, transform: 'translate(-50%, -50%)' }}
+                          >
+                            {/* Outer ring */}
+                            <div style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              border: '2px solid white',
+                              boxShadow: '0 0 0 1.5px rgba(0,0,0,0.5), 0 0 12px rgba(0,0,0,0.4)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: 'rgba(255,255,255,0.15)',
+                            }}>
+                              {/* Inner dot */}
+                              <div style={{
+                                width: 10, height: 10, borderRadius: '50%',
+                                background: 'var(--crimson)',
+                                boxShadow: '0 0 0 2px white',
+                              }} />
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Crosshair guide lines */}
+                      {(() => {
+                        const parts = (form.imageFocus || 'center').split(' ')
+                        let px = 50, py = 50
+                        if (parts.length === 2) { px = parseFloat(parts[0]) || 50; py = parseFloat(parts[1]) || 50 }
+                        return (
+                          <>
+                            <div className="absolute pointer-events-none" style={{
+                              left: `${px}%`, top: 0, bottom: 0, width: 1,
+                              background: 'rgba(255,255,255,0.25)',
+                            }} />
+                            <div className="absolute pointer-events-none" style={{
+                              top: `${py}%`, left: 0, right: 0, height: 1,
+                              background: 'rgba(255,255,255,0.25)',
+                            }} />
+                          </>
+                        )
+                      })()}
+
+                      {/* Instruction overlay — fades after click */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="text-white text-xs bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                          👆 Click to move focus point
+                        </span>
+                      </div>
+
+                      {/* Current value badge */}
+                      <div className="absolute bottom-2 right-2 pointer-events-none">
+                        <span className="text-white text-xs bg-black/60 px-2 py-1 rounded font-mono">
+                          {form.imageFocus || 'center'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Click to anchor image position</p>
+
+                    {/* Preview of how it looks cropped on mobile vs desktop */}
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1 font-medium">📱 Mobile crop preview</p>
+                        <div className="relative rounded overflow-hidden border border-gray-200" style={{ height: 100, background: '#F3F4F6' }}>
+                          <img src={form.imageUrl} alt="Mobile preview"
+                            className="w-full h-full"
+                            style={{ objectFit: 'cover', objectPosition: form.imageFocus }}
+                            draggable={false}
+                          />
+                          <div className="absolute inset-0 border-2 border-dashed border-blue-400 pointer-events-none opacity-60 rounded" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1 font-medium">🖥️ Desktop crop preview</p>
+                        <div className="relative rounded overflow-hidden border border-gray-200" style={{ height: 100, background: '#F3F4F6' }}>
+                          <img src={form.imageUrl} alt="Desktop preview"
+                            className="w-full h-full"
+                            style={{ objectFit: 'cover', objectPosition: form.imageFocus }}
+                            draggable={false}
+                          />
+                          <div className="absolute inset-0 border-2 border-dashed border-green-400 pointer-events-none opacity-60 rounded" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
                   <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
                     className="btn btn-secondary text-xs flex items-center gap-1">
                     <Upload size={12} /> {uploading ? 'Uploading...' : 'Change Image'}
