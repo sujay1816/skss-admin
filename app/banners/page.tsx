@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { supabase } from '@/lib/supabase'
-import { Plus, Trash2, Upload, Edit, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, Upload, Edit, Eye, EyeOff, ChevronUp, ChevronDown, Video, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const OVERLAY_OPTIONS = [
@@ -53,7 +53,9 @@ export default function BannersPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<any>({ ...DEFAULT_FORM })
   const [uploading, setUploading] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const videoFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     supabase.from('banners').select('*').order('display_order')
@@ -77,8 +79,42 @@ export default function BannersPage() {
     setUploading(false)
   }
 
+  const uploadVideo = async (file: File) => {
+    const allowed = ['video/mp4', 'video/webm', 'video/quicktime']
+    if (!allowed.includes(file.type)) {
+      toast.error('Only MP4, WebM or MOV videos are supported')
+      return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Video is over 20MB — please compress it first for faster page loading')
+      return
+    }
+    setUploadingVideo(true)
+    try {
+      const { data: cfg } = await supabase.from('site_config').select('value').eq('key', 'cloudinary_cloud_name').single()
+      if (!cfg?.value) { toast.error('Set Cloudinary Cloud Name in Config first'); setUploadingVideo(false); return }
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('upload_preset', 'skss_banners')
+      fd.append('folder', 'skss/banners')
+      // IMPORTANT: must use /video/upload not /image/upload
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cfg.value}/video/upload`,
+        { method: 'POST', body: fd }
+      )
+      const data = await res.json()
+      if (data.secure_url) {
+        setForm((p: any) => ({ ...p, videoUrl: data.secure_url }))
+        toast.success('Video uploaded! (' + (file.size / 1024 / 1024).toFixed(1) + 'MB)')
+      } else {
+        toast.error(data.error?.message || 'Upload failed — make sure your Cloudinary upload preset allows video files')
+      }
+    } catch { toast.error('Video upload error') }
+    setUploadingVideo(false)
+  }
+
   const save = async () => {
-    if (!form.imageUrl) { toast.error('Please upload a banner image'); return }
+    if (!form.imageUrl) { toast.error('Please upload a banner image (required as fallback for video)'); return }
     const payload = {
       image_url: form.imageUrl, image_focus: form.imageFocus, video_url: form.videoUrl || null,
       heading: form.heading, heading_italic: form.headingItalic, subheading: form.subheading || null,
@@ -214,11 +250,85 @@ export default function BannersPage() {
             {/* VIDEO */}
             <div className="border-t border-gray-100 pt-5 mb-5">
               <p className="text-sm font-semibold text-gray-700 mb-1">Background Video (Optional)</p>
-              <p className="text-xs text-gray-400 mb-3">Upload MP4 to Cloudinary and paste URL. Keep under 10MB for fast loading.</p>
-              <input className="input" value={form.videoUrl}
-                onChange={e => setForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
-                placeholder="https://res.cloudinary.com/.../video.mp4 (optional)" />
-              {form.videoUrl && <p className="text-xs text-green-600 mt-1">✓ Video URL set</p>}
+              <p className="text-xs text-gray-400 mb-3">
+                Upload an MP4/WebM video as the hero background. Keep under 10MB for fast loading.
+                The banner image above is used as a poster/fallback while the video loads — so always set an image too.
+              </p>
+
+              {/* Hidden video file input */}
+              <input
+                ref={videoFileRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                className="hidden"
+                onChange={e => e.target.files?.[0] && uploadVideo(e.target.files[0])}
+              />
+
+              {form.videoUrl ? (
+                <div className="space-y-3">
+                  {/* Live video preview */}
+                  <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-black" style={{ height: 140 }}>
+                    <video
+                      key={form.videoUrl}
+                      src={form.videoUrl}
+                      className="w-full h-full object-cover"
+                      muted loop playsInline autoPlay
+                    />
+                    <div className="absolute top-2 left-2">
+                      <span className="text-xs bg-black/60 text-white px-2 py-0.5 rounded flex items-center gap-1">
+                        <Video size={10} /> Video set
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button type="button" onClick={() => videoFileRef.current?.click()} disabled={uploadingVideo}
+                      className="btn btn-secondary text-xs flex items-center gap-1.5">
+                      <Upload size={12} />
+                      {uploadingVideo ? 'Uploading...' : 'Replace Video'}
+                    </button>
+                    <button type="button" onClick={() => setForm((p: any) => ({ ...p, videoUrl: '' }))}
+                      className="btn text-xs flex items-center gap-1.5 text-red-500 border border-red-200 hover:bg-red-50">
+                      <X size={12} /> Remove Video
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Video URL (auto-filled after upload)</label>
+                    <input className="input text-xs font-mono" value={form.videoUrl}
+                      onChange={e => setForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
+                      placeholder="https://res.cloudinary.com/.../video.mp4" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <button type="button" onClick={() => videoFileRef.current?.click()} disabled={uploadingVideo}
+                    className="w-full h-24 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-red-300 transition-colors">
+                    {uploadingVideo ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-xs text-gray-500">Uploading video...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Video size={20} className="text-gray-400" />
+                        <p className="text-xs text-gray-500 font-medium">Click to upload video</p>
+                        <p className="text-xs text-gray-400">MP4, WebM or MOV · Max 20MB</p>
+                      </>
+                    )}
+                  </button>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Or paste a Cloudinary video URL directly</label>
+                    <input className="input text-xs" value={form.videoUrl}
+                      onChange={e => setForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
+                      placeholder="https://res.cloudinary.com/.../video.mp4" />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-amber-600 mt-2 flex items-start gap-1.5">
+                <span className="flex-shrink-0">⚠️</span>
+                Make sure your <strong>skss_banners</strong> upload preset in Cloudinary allows video formats (mp4, webm).
+                Cloudinary → Settings → Upload → Upload presets → Edit skss_banners → set Allowed formats.
+              </p>
             </div>
 
             {/* TEXT */}
