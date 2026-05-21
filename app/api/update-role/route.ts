@@ -1,43 +1,54 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 
-// Uses service role key to bypass RLS — only callable by verified superadmins
+// Uses service role key throughout — bypasses RLS for both read and write.
+// Security is maintained by verifying the auth token via auth.getUser()
+// and checking the caller's role before making any changes.
 export async function POST(request: Request) {
   try {
-    const cookieStore = cookies()
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
 
-    // 1. Verify the calling user is a superadmin via their session
-    const supabaseUser = createServerClient(
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Service role client — bypasses RLS for all operations
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: () => {},
-        },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
+    // 1. Verify the token is valid and get the calling user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. Check calling user's role
-    const { data: callerProfile } = await supabaseUser
-      .from('profiles').select('role').eq('id', user.id).single()
+    // 2. Read caller's role using service role key (bypasses RLS — always succeeds)
+    const { data: callerProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-    if (callerProfile?.role !== 'superadmin') {
+    if (profileError || !callerProfile) {
+      return NextResponse.json({ error: 'Could not verify your role' }, { status: 403 })
+    }
+
+    if (callerProfile.role !== 'superadmin') {
       return NextResponse.json({ error: 'Only superadmin can change roles' }, { status: 403 })
     }
 
     const { targetId, newRole } = await request.json()
 
+    if (!targetId || !newRole) {
+      return NextResponse.json({ error: 'Missing targetId or newRole' }, { status: 400 })
+    }
+
     // 3. Prevent changing own role
     if (targetId === user.id) {
-      return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
+      return NextResponse.json({ error: 'You cannot change your own role' }, { status: 400 })
     }
 
     // 4. Prevent promoting to superadmin via API
@@ -47,16 +58,22 @@ export async function POST(request: Request) {
 
     const validRoles = ['staff', 'admin', 'customer']
     if (!validRoles.includes(newRole)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid role: ' + newRole }, { status: 400 })
     }
 
-    // 5. Use service role key to bypass RLS and actually update the row
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // 5. Verify target user exists
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('role, full_name, email')
+      .eq('id', targetId)
+      .single()
 
-    const { error: updateError } = await supabaseAdmin
+    if (!targetProfile) {
+      return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
+    }
+
+    // 6. Update role using service role key — bypasses RLS
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({ role: newRole })
       .eq('id', targetId)
@@ -65,7 +82,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      updated: { id: targetId, from: targetProfile.role, to: newRole }
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

@@ -36,6 +36,12 @@ export default function StaffPage() {
   const [confirmChange, setConfirmChange] = useState<{ id: string; name: string; from: string; to: string } | null>(null)
   const [changingRole, setChangingRole] = useState<string | null>(null)
 
+  // Helper to get current session token for API calls
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -69,9 +75,10 @@ export default function StaffPage() {
     setChangingRole(id)
     setConfirmChange(null)
     try {
+      const token = await getToken()
       const res = await fetch('/api/update-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ targetId: id, newRole: to }),
       })
       const result = await res.json()
@@ -107,9 +114,10 @@ export default function StaffPage() {
     if (!isSuperAdmin) { toast.error('Only superadmin can promote users'); return }
     setPromoting(customer.id)
     try {
+      const token = await getToken()
       const res = await fetch('/api/update-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ targetId: customer.id, newRole: promoteRole }),
       })
       const result = await res.json()
