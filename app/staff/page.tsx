@@ -69,8 +69,13 @@ export default function StaffPage() {
     setChangingRole(id)
     setConfirmChange(null)
     try {
-      const { error } = await supabase.from('profiles').update({ role: to }).eq('id', id)
-      if (error) throw error
+      const res = await fetch('/api/update-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId: id, newRole: to }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Update failed')
       if (to === 'customer') {
         setStaff(prev => prev.filter(s => s.id !== id))
         toast.success('Access revoked — moved back to customer')
@@ -102,8 +107,13 @@ export default function StaffPage() {
     if (!isSuperAdmin) { toast.error('Only superadmin can promote users'); return }
     setPromoting(customer.id)
     try {
-      const { error } = await supabase.from('profiles').update({ role: promoteRole }).eq('id', customer.id)
-      if (error) throw error
+      const res = await fetch('/api/update-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId: customer.id, newRole: promoteRole }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Promotion failed')
       toast.success(`${customer.full_name || customer.email} promoted to ${ROLE_LABELS[promoteRole]}!`)
       setStaff(prev => [...prev, { ...customer, role: promoteRole }])
       setSearchResults(prev => prev.filter(c => c.id !== customer.id))
